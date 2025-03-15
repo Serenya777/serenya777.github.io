@@ -44,14 +44,13 @@
     <script>
         let currentItems = [];
         
-        // Инициализация Web Apps
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
         
         // Запрос инвентаря при загрузке
         Telegram.WebApp.sendData(JSON.stringify({ action: "get_inventory" }));
 
-        // Обработчик ответов от бота (без всплывающих сообщений)
+        // Обработчик ответов от бота
         Telegram.WebApp.onEvent('messageReceived', (event) => {
             const data = JSON.parse(event.data);
             if (data.type === "inventory_update") {
@@ -64,12 +63,11 @@
             const resultDiv = document.getElementById("result");
             resultDiv.innerHTML = "⏳ Герой в подземелье...";
             
-            // Симуляция завершения через 3 секунды
             setTimeout(() => {
                 const newItem = generateItem();
                 currentItems.push(newItem);
                 
-                // Отправляем предмет боту (без уведомлений)
+                // Отправляем данные боту (без закрытия окна)
                 Telegram.WebApp.sendData(JSON.stringify({
                     action: "dungeon_complete",
                     item: newItem
