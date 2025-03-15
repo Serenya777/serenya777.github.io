@@ -42,22 +42,10 @@
     </div>
 
     <script>
-        let currentItems = [];
-        
+        let currentItems = JSON.parse(localStorage.getItem('inventory') || [];
+
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
-        
-        // Запрос инвентаря при загрузке
-        Telegram.WebApp.sendData(JSON.stringify({ action: "get_inventory" }));
-
-        // Обработчик ответов от бота
-        Telegram.WebApp.onEvent('messageReceived', (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === "inventory_update") {
-                currentItems = data.items;
-                updateInventory();
-            }
-        });
 
         function startDungeon(duration) {
             const resultDiv = document.getElementById("result");
@@ -66,14 +54,8 @@
             setTimeout(() => {
                 const newItem = generateItem();
                 currentItems.push(newItem);
+                localStorage.setItem('inventory', JSON.stringify(currentItems));
                 
-                // Отправляем данные боту (без закрытия окна)
-                Telegram.WebApp.sendData(JSON.stringify({
-                    action: "dungeon_complete",
-                    item: newItem
-                }));
-                
-                // Обновляем интерфейс
                 resultDiv.innerHTML = `
                     🎉 Добыто: 
                     <div class="item-card">
@@ -103,6 +85,9 @@
                 </div>
             `).join("");
         }
+
+        // Первоначальная загрузка инвентаря
+        updateInventory();
     </script>
 </body>
 </html>
