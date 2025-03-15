@@ -5,7 +5,27 @@
     <meta charset="UTF-8">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... ваш CSS ... */
+        body { 
+            background: #1a1a1a; 
+            color: white;
+            font-family: Arial;
+            padding: 20px;
+        }
+        .dungeon-btn {
+            background: #2c3e50;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+        .item-card {
+            background: #2c3e50;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -24,28 +44,19 @@
     <script>
         let currentItems = [];
         
+        // Инициализация Web Apps
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
         
         // Запрос инвентаря при загрузке
         Telegram.WebApp.sendData(JSON.stringify({ action: "get_inventory" }));
-        
-        // Обработчик ответов от бота
+
+        // Обработчик ответов от бота (без всплывающих сообщений)
         Telegram.WebApp.onEvent('messageReceived', (event) => {
             const data = JSON.parse(event.data);
-            
             if (data.type === "inventory_update") {
                 currentItems = data.items;
                 updateInventory();
-            }
-            
-            if (data.type === "dungeon_result") {
-                const resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = `
-                    🎉 Подземелье пройдено!<br>
-                    Добыто: <strong>${data.item.name}</strong><br>
-                    Защита: ${data.item.stats.defense}
-                `;
             }
         });
 
@@ -53,28 +64,39 @@
             const resultDiv = document.getElementById("result");
             resultDiv.innerHTML = "⏳ Герой в подземелье...";
             
-            // Симуляция завершения подземелья
+            // Симуляция завершения через 3 секунды
             setTimeout(() => {
                 const newItem = generateItem();
+                currentItems.push(newItem);
                 
-                // Отправляем данные боту
+                // Отправляем предмет боту (без уведомлений)
                 Telegram.WebApp.sendData(JSON.stringify({
                     action: "dungeon_complete",
                     item: newItem
                 }));
-            }, 3000); // 3 секунды для теста
+                
+                // Обновляем интерфейс
+                resultDiv.innerHTML = `
+                    🎉 Добыто: 
+                    <div class="item-card">
+                        <b>${newItem.name}</b><br>
+                        Защита: ${newItem.stats.defense}
+                    </div>
+                `;
+                updateInventory();
+            }, 3000);
         }
-        
+
         function generateItem() {
-            const rarities = ["Обычный", "Магический", "Редкий", "Легендарный"];
-            const types = ["Меч", "Щит", "Шлем"];
+            const rarities = ["Обычный", "Магический", "Редкий"];
+            const types = ["Меч", "Щит", "Кольцо"];
             return {
                 id: Date.now(),
-                name: `${rarities[Math.floor(Math.random() * 4)]} ${types[Math.floor(Math.random() * 3)]}`,
+                name: `${rarities[Math.floor(Math.random() * 3)]} ${types[Math.floor(Math.random() * 3)]}`,
                 stats: { defense: Math.floor(Math.random() * 20) + 1 }
             };
         }
-        
+
         function updateInventory() {
             const list = document.getElementById("items-list");
             list.innerHTML = currentItems.map(item => `
