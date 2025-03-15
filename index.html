@@ -5,32 +5,7 @@
     <meta charset="UTF-8">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            background: #1a1a1a; 
-            color: white;
-            font-family: Arial;
-            padding: 20px;
-        }
-        .dungeon-btn {
-            background: #2c3e50;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-            border: none;
-            color: white;
-        }
-        .item-card {
-            background: #2c3e50;
-            padding: 10px;
-            margin: 5px;
-            border-radius: 8px;
-        }
-        #inventory {
-            margin-top: 20px;
-            border-top: 1px solid #444;
-            padding-top: 15px;
-        }
+        /* ... ваш CSS ... */
     </style>
 </head>
 <body>
@@ -39,8 +14,7 @@
         <button class="dungeon-btn" onclick="startDungeon(1)">1 час</button>
         <button class="dungeon-btn" onclick="startDungeon(2)">2 часа</button>
         
-        <div id="result" style="margin-top: 20px;"></div>
-        
+        <div id="result"></div>
         <div id="inventory">
             <h2>🎒 Инвентарь</h2>
             <div id="items-list"></div>
@@ -50,77 +24,62 @@
     <script>
         let currentItems = [];
         
-        // Инициализация
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
         
         // Запрос инвентаря при загрузке
-        Telegram.WebApp.sendData(JSON.stringify({
-            action: "get_inventory"
-        }));
+        Telegram.WebApp.sendData(JSON.stringify({ action: "get_inventory" }));
         
-        // Обработчик сообщений от бота
-        Telegram.WebApp.onEvent('mainButtonClicked', () => {
-            Telegram.WebApp.close();
-        });
-        
-        // Получение данных от бота
-        window.addEventListener('message', (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === "inventory_data") {
+        // Обработчик ответов от бота
+        Telegram.WebApp.onEvent('messageReceived', (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === "inventory_update") {
                 currentItems = data.items;
                 updateInventory();
             }
+            
+            if (data.type === "dungeon_result") {
+                const resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = `
+                    🎉 Подземелье пройдено!<br>
+                    Добыто: <strong>${data.item.name}</strong><br>
+                    Защита: ${data.item.stats.defense}
+                `;
+            }
         });
 
-        // Запуск подземелья
         function startDungeon(duration) {
             const resultDiv = document.getElementById("result");
-            resultDiv.innerHTML = `⏳ Идёт исследование подземелья...`;
+            resultDiv.innerHTML = "⏳ Герой в подземелье...";
             
+            // Симуляция завершения подземелья
             setTimeout(() => {
-                const newItem = generateItem(duration);
-                currentItems.push(newItem);
+                const newItem = generateItem();
                 
-                resultDiv.innerHTML = `
-                    🎉 Добыто: 
-                    <div class="item-card">
-                        <b>${newItem.name}</b><br>
-                        Защита: ${newItem.stats.defense}
-                    </div>
-                `;
-                
-                // Синхронизация с ботом
+                // Отправляем данные боту
                 Telegram.WebApp.sendData(JSON.stringify({
-                    action: "update_inventory",
-                    items: currentItems
+                    action: "dungeon_complete",
+                    item: newItem
                 }));
-                
-                updateInventory();
-            }, 3000);
+            }, 3000); // 3 секунды для теста
         }
         
-        // Генерация предмета
         function generateItem() {
             const rarities = ["Обычный", "Магический", "Редкий", "Легендарный"];
-            const types = ["Меч", "Щит", "Шлем", "Кольцо"];
+            const types = ["Меч", "Щит", "Шлем"];
             return {
                 id: Date.now(),
-                name: `${rarities[Math.floor(Math.random() * 4)]} ${types[Math.floor(Math.random() * 4)]}`,
-                stats: {
-                    defense: Math.floor(Math.random() * 20) + 5,
-                    magicDefense: Math.floor(Math.random() * 15) + 5
-                }
+                name: `${rarities[Math.floor(Math.random() * 4)]} ${types[Math.floor(Math.random() * 3)]}`,
+                stats: { defense: Math.floor(Math.random() * 20) + 1 }
             };
         }
         
-        // Обновление инвентаря
         function updateInventory() {
             const list = document.getElementById("items-list");
             list.innerHTML = currentItems.map(item => `
                 <div class="item-card">
-                    ${item.name}<br>
-                    🛡️ ${item.stats.defense} | 🔮 ${item.stats.magicDefense}
+                    ${item.name} (🛡️${item.stats.defense})
                 </div>
             `).join("");
         }
