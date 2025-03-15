@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dungeon Quest</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .dungeon-button { 
+            padding: 15px;
+            margin: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>🏰 Выберите подземелье</h1>
+        <button class="dungeon-button" onclick="startDungeon(1)">1 час</button>
+        <button class="dungeon-button" onclick="startDungeon(2)">2 часа</button>
+    </div>
+
+    <script>
+        function startDungeon(duration) {
+            Telegram.WebApp.sendData(JSON.stringify({
+                action: "start_dungeon",
+                duration: duration
+            }));
+        }
+        
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+    </script>
+</body>
+</html>
