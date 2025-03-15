@@ -5,27 +5,9 @@
     <meta charset="UTF-8">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            background: #1a1a1a; 
-            color: white;
-            font-family: Arial;
-            padding: 20px;
-        }
-        .dungeon-btn {
-            background: #2c3e50;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-            border: none;
-            color: white;
-        }
-        .item-card {
-            background: #2c3e50;
-            padding: 10px;
-            margin: 5px;
-            border-radius: 8px;
-        }
+        body { background: #1a1a1a; color: white; font-family: Arial; padding: 20px; }
+        .dungeon-btn { background: #2c3e50; padding: 15px; margin: 10px; border-radius: 10px; cursor: pointer; border: none; color: white; }
+        .item-card { background: #2c3e50; padding: 10px; margin: 5px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -33,7 +15,6 @@
         <h1>🏰 Выберите подземелье</h1>
         <button class="dungeon-btn" onclick="startDungeon(1)">1 час</button>
         <button class="dungeon-btn" onclick="startDungeon(2)">2 часа</button>
-        
         <div id="result"></div>
         <div id="inventory">
             <h2>🎒 Инвентарь</h2>
@@ -42,21 +23,25 @@
     </div>
 
     <script>
-        let currentItems = JSON.parse(localStorage.getItem('inventory') || [];
+        let currentItems = JSON.parse(localStorage.getItem('inventory') || '[]');
 
         Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
+        Telegram.WebApp.expand(); // Окно не закрывается
 
         function startDungeon(duration) {
-            const resultDiv = document.getElementById("result");
-            resultDiv.innerHTML = "⏳ Герой в подземелье...";
+            document.getElementById("result").innerHTML = "⏳ Герой в подземелье...";
             
             setTimeout(() => {
-                const newItem = generateItem();
+                const newItem = {
+                    id: Date.now(),
+                    name: `Меч +${Math.floor(Math.random() * 10)}`,
+                    stats: { defense: Math.floor(Math.random() * 20) + 1 }
+                };
+                
                 currentItems.push(newItem);
                 localStorage.setItem('inventory', JSON.stringify(currentItems));
                 
-                resultDiv.innerHTML = `
+                document.getElementById("result").innerHTML = `
                     🎉 Добыто: 
                     <div class="item-card">
                         <b>${newItem.name}</b><br>
@@ -67,26 +52,12 @@
             }, 3000);
         }
 
-        function generateItem() {
-            const rarities = ["Обычный", "Магический", "Редкий"];
-            const types = ["Меч", "Щит", "Кольцо"];
-            return {
-                id: Date.now(),
-                name: `${rarities[Math.floor(Math.random() * 3)]} ${types[Math.floor(Math.random() * 3)]}`,
-                stats: { defense: Math.floor(Math.random() * 20) + 1 }
-            };
-        }
-
         function updateInventory() {
-            const list = document.getElementById("items-list");
-            list.innerHTML = currentItems.map(item => `
-                <div class="item-card">
-                    ${item.name} (🛡️${item.stats.defense})
-                </div>
-            `).join("");
+            document.getElementById("items-list").innerHTML = currentItems
+                .map(item => `<div class="item-card">${item.name} (🛡️${item.stats.defense})</div>`)
+                .join("");
         }
 
-        // Первоначальная загрузка инвентаря
         updateInventory();
     </script>
 </body>
