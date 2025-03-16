@@ -197,7 +197,15 @@
                 const data = JSON.parse(savedData);
                 currentUser = {
                     ...currentUser,
-                    ...data,
+                    inventory: data.inventory || [],
+                    equipped: data.equipped || {
+                        weapon: null,
+                        armor: null,
+                        helmet: null
+                    },
+                    gold: data.gold || 0,
+                    level: data.level || 1,
+                    exp: data.exp || 0,
                     shop: data.shop || generateShopItems(10)
                 };
             } else {
