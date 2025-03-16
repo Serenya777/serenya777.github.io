@@ -7,6 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* Стили */
         body {
             background: linear-gradient(135deg, #1a1a1a, #2c3e50);
             min-height: 100vh;
@@ -100,6 +101,40 @@
         @keyframes glow {
             50% { text-shadow: 0 0 10px gold; }
         }
+
+        /* Подземелья */
+        .dungeons-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .dungeon-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .dungeon-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .dungeon-btn::after {
+            content: '>';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -111,10 +146,17 @@
     </div>
 
     <!-- Контейнер персонажа -->
-    <div id="character-container">
-        <div id="character-image"></div>
-        <button onclick="toggleInventory()" class="dungeon-btn" style="margin-top: 20px;">
-            <i class="fas fa-sack"></i> Инвентарь
+ 
+
+    <!-- Подземелья -->
+    <div class="dungeons-container">
+        <button class="dungeon-btn" onclick="exploreDungeon(1)">
+            <i class="fas fa-dungeon"></i> Подземелье 1
+            <div>Время: 1 час</div>
+        </button>
+        <button class="dungeon-btn" onclick="exploreDungeon(2)">
+            <i class="fas fa-skull"></i> Подземелье 2
+            <div>Время: 2 часа</div>
         </button>
     </div>
 
@@ -252,6 +294,90 @@
         function saveGame() {
             localStorage.setItem('gameData', JSON.stringify(currentUser));
         }
+
+        // Функция для похода в подземелье
+        function exploreDungeon(difficulty) {
+            const rewards = {
+                exp: 50 * difficulty,
+                gold: 30 * difficulty,
+                item: generateItem()
+            };
+
+            // Обновление данных
+            currentUser.exp += rewards.exp;
+            currentUser.gold += rewards.gold;
+            currentUser.inventory.push(rewards.item);
+            
+            // Проверка уровня
+            checkLevelUp();
+            
+            // Сохранение и обновление интерфейса
+            saveGame();
+            updateUI();
+            showRewardPopup(rewards);
+        }
+
+        // Генерация предметов
+        function generateItem() {
+            const types = [
+                { name: "Меч", icon: "fas fa-sword", stats: { damage: 10 } },
+                { name: "Щит", icon: "fas fa-shield-alt", stats: { defense: 5 } },
+                { name: "Шлем", icon: "fas fa-helmet-safety", stats: { hp: 15 } }
+            ];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            return {
+                name: randomType.name,
+                icon: randomType.icon,
+                stats: randomType.stats
+            };
+        }
+
+        // Проверка уровня
+        function checkLevelUp() {
+            const needed = 100 * (2 ** (currentUser.level - 1));
+            if (currentUser.exp >= needed) {
+                currentUser.level++;
+                currentUser.exp = 0;
+                currentUser.stats.hp += 20;
+                currentUser.stats.damage += 5;
+                alert(`Поздравляем! Вы достигли уровня ${currentUser.level}`);
+            }
+        }
+
+        // Показ наград
+        function showRewardPopup(rewards) {
+            const popup = document.createElement('div');
+            popup.className = 'reward-popup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <i class="fas fa-trophy"></i>
+                    <div>Получено:</div>
+                    <div>Опыт: +${rewards.exp}</div>
+                    <div>Золото: +${rewards.gold}</div>
+                    <div>Предмет: ${rewards.item.name}</div>
+                </div>
+            `;
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 3000);
+        }
     </script>
+
+    <style>
+        /* Всплывающее окно наград */
+        .reward-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
 </body>
 </html>
