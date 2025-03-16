@@ -195,10 +195,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
-            
+
             // Запрашиваем данные у бота
             Telegram.WebApp.sendData(JSON.stringify({ action: 'get_player_data' }));
-            
+
             // Обрабатываем ответ от бота
             Telegram.WebApp.onEvent('web_app_data', (data) => {
                 const parsedData = JSON.parse(data.data);
@@ -219,7 +219,7 @@
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
             currentUser.inventory.push(rewards.item);
-            
+
             checkLevelUp();
             updateUI();
             showRewardPopup(rewards);
@@ -230,7 +230,7 @@
         function generateItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
-            
+
             return {
                 name: `${rarityConfig[rarity].name} ${type.name}`,
                 type: type.type,
@@ -245,7 +245,7 @@
             for(let i = 0; i < count; i++) {
                 const rarity = getRandomRarity();
                 const type = getRandomItemType();
-                
+
                 items.push({
                     name: `${rarityConfig[rarity].name} ${type.name}`,
                     type: type.type,
@@ -290,7 +290,7 @@
             document.getElementById('gold').textContent = currentUser.gold;
             document.getElementById('exp').textContent = currentUser.exp;
             document.getElementById('exp-needed').textContent = 100 * (2 ** (currentUser.level - 1));
-            
+
             // Обновление экипировки
             document.getElementById('equipped-weapon').innerHTML = 
                 currentUser.equipped.weapon ? `
@@ -312,6 +312,7 @@
             
             updateInventory();
             updateShop();
+            calculatePower();
         }
 
         // Отображение инвентаря
