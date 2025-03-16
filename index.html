@@ -182,6 +182,7 @@
                 armor: null,
                 helmet: null
             },
+            shop: [],
             gold: 0,
             level: 1,
             exp: 0,
@@ -201,14 +202,14 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
-            // Загрузка сохранённых данных
+            // Загрузка данных
             const savedData = localStorage.getItem('gameData');
             if (savedData) {
                 const data = JSON.parse(savedData);
-                Object.assign(currentUser, {
+                currentUser = {
                     ...data,
-                    shop: generateShopItems(10) // Генерируем новый магазин при загрузке
-                });
+                    shop: data.shop || generateShopItems(10)
+                };
             } else {
                 currentUser.shop = generateShopItems(10);
             }
@@ -235,15 +236,15 @@
             return items;
         }
 
-        // Генерация случайного предмета
-        function generateItem() {
+        // Генерация случайного предмета из подземелья
+        function generateDungeonItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
             
             return {
                 name: `${rarityConfig[rarity].name} ${type.name}`,
                 type: type.type,
-                stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
+                stats: { [type.stat]: Math.floor(15 + Math.random() * 25) * rarityConfig[rarity].multiplier },
                 rarity: rarity
             };
         }
@@ -268,12 +269,12 @@
             const rewards = {
                 exp: 50 * difficulty,
                 gold: 30 * difficulty,
-                item: generateItem()
+                item: generateDungeonItem() // Генерируем предмет
             };
 
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
-            currentUser.inventory.push(rewards.item);
+            currentUser.inventory.push(rewards.item); // Добавляем предмет
             
             checkLevelUp();
             updateUI();
@@ -286,7 +287,7 @@
             const needed = 100 * (2 ** (currentUser.level - 1));
             if (currentUser.exp >= needed) {
                 currentUser.level++;
-                currentUser.exp = 0;
+                currentUser.exp -= needed;
                 currentUser.stats.hp += 20;
                 currentUser.stats.damage += 5;
                 alert(`Поздравляем! Вы достигли уровня ${currentUser.level}`);
@@ -304,23 +305,24 @@
             document.getElementById('equipped-weapon').innerHTML = 
                 currentUser.equipped.weapon ? `
                     <i class="fas fa-sword"></i> ${currentUser.equipped.weapon.name}
-                    <div>Урон: +${currentUser.equipped.weapon.stats.damage}</div>
+                    <div>⚔️ Урон: +${currentUser.equipped.weapon.stats.damage}</div>
                 ` : '<i class="fas fa-sword"></i> Оружие: -';
                 
             document.getElementById('equipped-armor').innerHTML = 
                 currentUser.equipped.armor ? `
                     <i class="fas fa-shield-alt"></i> ${currentUser.equipped.armor.name}
-                    <div>Защита: +${currentUser.equipped.armor.stats.defense}</div>
+                    <div>🛡️ Защита: +${currentUser.equipped.armor.stats.defense}</div>
                 ` : '<i class="fas fa-shield-alt"></i> Броня: -';
                 
             document.getElementById('equipped-helmet').innerHTML = 
                 currentUser.equipped.helmet ? `
                     <i class="fas fa-helmet-safety"></i> ${currentUser.equipped.helmet.name}
-                    <div>Здоровье: +${currentUser.equipped.helmet.stats.hp}</div>
+                    <div>❤️ Здоровье: +${currentUser.equipped.helmet.stats.hp}</div>
                 ` : '<i class="fas fa-helmet-safety"></i> Шлем: -';
             
             updateInventory();
             updateShop();
+            calculatePower();
         }
 
         // Отображение инвентаря
@@ -377,7 +379,6 @@
             currentUser.equipped[item.type] = item;
             currentUser.inventory.splice(index, 1);
             
-            calculatePower();
             updateUI();
             saveGame();
         }
@@ -387,6 +388,7 @@
             const item = currentUser.inventory[index];
             currentUser.gold += getItemPrice(item);
             currentUser.inventory.splice(index, 1);
+            
             updateUI();
             saveGame();
         }
@@ -405,11 +407,29 @@
             if (currentUser.gold >= item.price) {
                 currentUser.gold -= item.price;
                 currentUser.inventory.push(item);
+                
+                // Генерируем новый предмет для магазина
+                currentUser.shop[index] = generateShopItem();
+                
                 updateUI();
                 saveGame();
             } else {
                 alert("Недостаточно золота!");
             }
+        }
+
+        // Генерация одного предмета для магазина
+        function generateShopItem() {
+            const rarity = getRandomRarity();
+            const type = getRandomItemType();
+            
+            return {
+                name: `${rarityConfig[rarity].name} ${type.name}`,
+                type: type.type,
+                price: Math.floor(50 + Math.random() * 100) * rarityConfig[rarity].multiplier,
+                stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
+                rarity: rarity
+            };
         }
 
         // Расчёт мощи
