@@ -6,87 +6,280 @@
     <title>Dungeon Quest</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... (оставить стили из предыдущего ответа без изменений) ... */
+        /* Основные стили */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Панель игрока */
+        .player-info {
+            background: #2c3e50;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        /* Кнопки подземелий */
+        .dungeons-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .dungeon-btn {
+            background: #3498db;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .dungeon-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Инвентарь */
+        .item-card {
+            background: #34495e;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            animation: itemAppear 0.5s ease;
+        }
+
+        /* Анимации */
+        @keyframes itemAppear {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes levelUp {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .level-up {
+            animation: levelUp 1s;
+            color: #f1c40f;
+        }
+
+        /* Торговая площадка */
+        .trade-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .trade-content {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏰 Dungeon Quest</h1>
-        
-        <div class="dungeons-container">
-            <button class="dungeon-btn" data-duration="1">1 час</button>
-            <button class="dungeon-btn" data-duration="2">2 часа</button>
+        <!-- Панель характеристик -->
+        <div class="player-info">
+            <div>
+                <div>🔰 Уровень <span id="level">1</span></div>
+                <div>⚡ Опыт <span id="exp">0</span>/<span id="exp-needed">100</span></div>
+            </div>
+            <div>
+                <div>❤️ Здоровье <span id="hp">100</span></div>
+                <div>⚔️ Урон <span id="damage">10</span></div>
+            </div>
         </div>
 
-        <div id="result"></div>
-        
+        <!-- Подземелья -->
+        <div class="dungeons-container">
+            <button class="dungeon-btn" data-duration="1">🏰 1 час</button>
+            <button class="dungeon-btn" data-duration="2">🏰 2 часа</button>
+        </div>
+
+        <!-- Инвентарь -->
         <div id="inventory">
-            <h2>🎒 Инвентарь</h2>
+            <h2>🎒 Инвентарь <button onclick="openTrade()">🔄 Обмен</button></h2>
             <div id="items-list"></div>
+        </div>
+
+        <!-- Модалка торговли -->
+        <div class="trade-modal" id="tradeModal">
+            <div class="trade-content">
+                <h3>🎪 Торговая площадка</h3>
+                <div id="trade-items"></div>
+                <button onclick="confirmTrade()">✅ Подтвердить</button>
+                <button onclick="closeTrade()">❌ Отмена</button>
+            </div>
         </div>
     </div>
 
     <script>
+        let currentUser = {
+            id: null,
+            inventory: [],
+            level: 1,
+            exp: 0,
+            stats: { hp: 100, damage: 10 }
+        };
+
+        // Инициализация
         document.addEventListener('DOMContentLoaded', () => {
-            // Инициализация
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
+            
+            // Загрузка данных
+            const savedData = localStorage.getItem('gameData');
+            if(savedData) currentUser = JSON.parse(savedData);
+            
+            updateUI();
+            initDungeons();
+        });
 
-            // Инициализация хранилища
-            let currentItems = JSON.parse(localStorage.getItem('inventory') || '[]');
-
-            // Вешаем обработчики на кнопки
+        // Подземелья
+        function initDungeons() {
             document.querySelectorAll('.dungeon-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const duration = parseInt(this.dataset.duration);
                     startDungeon(duration);
                 });
             });
+        }
 
-            function startDungeon(duration) {
-                const resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = `<div class="loading">⏳ Герой в подземелье...</div>`;
+        function startDungeon(duration) {
+            // Симуляция боя
+            setTimeout(() => {
+                const newItem = generateItem();
+                currentUser.inventory.push(newItem);
+                
+                // Начисление опыта
+                currentUser.exp += duration * 50;
+                checkLevelUp();
+                
+                // Сохранение и обновление
+                saveGame();
+                updateUI();
+                showResult(newItem);
+            }, 1000);
+        }
 
+        // Генерация предмета
+        function generateItem() {
+            const prefixes = ['Ржавый', 'Мистический', 'Легендарный'];
+            const types = ['Меч', 'Щит', 'Шлем'];
+            return {
+                name: `${prefixes[Math.floor(Math.random()*3)]} ${types[Math.floor(Math.random()*3)]}`,
+                stats: {
+                    defense: Math.floor(Math.random()*20)+1,
+                    damage: Math.floor(Math.random()*10)+1
+                }
+            };
+        }
+
+        // Система уровней
+        function checkLevelUp() {
+            const needed = getExpToNextLevel(currentUser.level);
+            
+            while(currentUser.exp >= needed) {
+                currentUser.exp -= needed;
+                currentUser.level++;
+                
+                // Улучшение характеристик
+                currentUser.stats.hp += 20;
+                currentUser.stats.damage += 5;
+                
+                // Анимация
+                document.getElementById('level').classList.add('level-up');
                 setTimeout(() => {
-                    const newItem = generateItem();
-                    currentItems.push(newItem);
-                    localStorage.setItem('inventory', JSON.stringify(currentItems));
-                    
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            🎉 Подземелье пройдено!
-                            <div class="item-card">
-                                <b>${newItem.name}</b>
-                                <div>🛡️ ${newItem.stats.defense}</div>
-                            </div>
-                        </div>
-                    `;
-                    updateInventory();
+                    document.getElementById('level').classList.remove('level-up');
                 }, 1000);
             }
+        }
 
-            function generateItem() {
-                const prefixes = ["Ржавый", "Мистический", "Легендарный"];
-                const types = ["Меч", "Щит", "Шлем"];
-                return {
-                    id: Date.now(),
-                    name: `${prefixes[Math.floor(Math.random() * 3)]} ${types[Math.floor(Math.random() * 3)]}`,
-                    stats: { defense: Math.floor(Math.random() * 20) + 1 }
-                };
-            }
+        function getExpToNextLevel(level) {
+            return 100 * Math.pow(2, level-1);
+        }
 
-            function updateInventory() {
-                const list = document.getElementById("items-list");
-                list.innerHTML = currentItems.map(item => `
-                    <div class="item-card">
-                        <div>${item.name}</div>
-                        <div>🛡️ ${item.stats.defense}</div>
-                    </div>
-                `).join("");
-            }
+        // Торговля
+        function openTrade() {
+            document.getElementById('tradeModal').style.display = 'flex';
+            // Здесь должна быть логика загрузки данных торговли
+        }
 
-            updateInventory();
-        });
+        function confirmTrade() {
+            // Логика подтверждения обмена
+            closeTrade();
+        }
+
+        function closeTrade() {
+            document.getElementById('tradeModal').style.display = 'none';
+        }
+
+        // Обновление интерфейса
+        function updateUI() {
+            document.getElementById('level').textContent = currentUser.level;
+            document.getElementById('exp').textContent = currentUser.exp;
+            document.getElementById('exp-needed').textContent = getExpToNextLevel(currentUser.level);
+            document.getElementById('hp').textContent = currentUser.stats.hp;
+            document.getElementById('damage').textContent = currentUser.stats.damage;
+            
+            // Обновление инвентаря
+            const itemsList = document.getElementById('items-list');
+            itemsList.innerHTML = currentUser.inventory.map(item => `
+                <div class="item-card">
+                    <div>${item.name}</div>
+                    <div>🛡️${item.stats.defense} ⚔️${item.stats.damage}</div>
+                </div>
+            `).join('');
+        }
+
+        function showResult(item) {
+            const resultHTML = `
+                <div class="item-card" style="margin-top:20px;">
+                    🎉 Получено: 
+                    <b>${item.name}</b>
+                    (🛡️${item.stats.defense} ⚔️${item.stats.damage})
+                </div>
+            `;
+            document.getElementById('inventory').insertAdjacentHTML('beforeend', resultHTML);
+        }
+
+        // Сохранение игры
+        function saveGame() {
+            localStorage.setItem('gameData', JSON.stringify(currentUser));
+        }
     </script>
 </body>
 </html>
