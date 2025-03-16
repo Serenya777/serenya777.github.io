@@ -7,6 +7,15 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* Новые стили для таблицы */
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px;
+        }
+
+        /* Остальные стили остаются прежними */
         body {
             background: linear-gradient(135deg, #1a1a1a, #2c3e50);
             min-height: 100vh;
@@ -34,6 +43,7 @@
             border-radius: 12px;
             width: 100%;
             cursor: pointer;
+            transition: all 0.3s;
             margin: 10px 0;
         }
 
@@ -53,7 +63,6 @@
             background: rgba(255,255,255,0.05);
             padding: 15px;
             border-radius: 8px;
-            margin: 10px 0;
             border: 2px solid transparent;
         }
 
@@ -129,7 +138,7 @@
                 </select>
                 <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="inventory-items"></div>
+            <div id="inventory-items" class="item-grid"></div>
         </div>
     </div>
 
@@ -139,7 +148,7 @@
             <h2>🏪 Магазин 
                 <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="shop-items"></div>
+            <div id="shop-items" class="item-grid"></div>
         </div>
     </div>
 
@@ -191,30 +200,49 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
-            // Загрузка данных
-            const savedData = localStorage.getItem('gameData');
-            if (savedData) {
-                const data = JSON.parse(savedData);
-                currentUser = {
-                    ...currentUser,
-                    inventory: data.inventory || [],
-                    equipped: data.equipped || {
-                        weapon: null,
-                        armor: null,
-                        helmet: null
-                    },
-                    gold: data.gold || 0,
-                    level: data.level || 1,
-                    exp: data.exp || 0,
-                    shop: data.shop || generateShopItems(10)
-                };
-            } else {
-                currentUser.shop = generateShopItems(10);
-            }
-            
-            updateUI();
-            calculatePower();
+            // Загрузка данных из Telegram
+            Telegram.WebApp.onEvent('web_app_data', (data) => {
+                if (data.type === 'player_data') {
+                    const parsedData = JSON.parse(data.data);
+                    currentUser = { ...currentUser, ...parsedData };
+                    updateUI();
+                }
+            });
+
+            // Запрос данных у бота
+            Telegram.WebApp.sendData(JSON.stringify({ action: 'get_player_data' }));
         });
+
+        // Поход в подземелье
+        function exploreDungeon(difficulty) {
+            const rewards = {
+                exp: 50 * difficulty,
+                gold: 30 * difficulty,
+                item: generateDungeonItem()
+            };
+
+            currentUser.exp += rewards.exp;
+            currentUser.gold += rewards.gold;
+            currentUser.inventory.push(rewards.item);
+            
+            checkLevelUp();
+            updateUI();
+            showRewardPopup(rewards);
+            saveGame();
+        }
+
+        // Генерация предмета из подземелья
+        function generateDungeonItem() {
+            const rarity = getRandomRarity();
+            const type = getRandomItemType();
+            
+            return {
+                name: `${rarityConfig[rarity].name} ${type.name}`,
+                type: type.type,
+                stats: { [type.stat]: Math.floor(15 + Math.random() * 25) * rarityConfig[rarity].multiplier },
+                rarity: rarity
+            };
+        }
 
         // Генерация предметов для магазина
         function generateShopItems(count) {
@@ -234,19 +262,6 @@
             return items;
         }
 
-        // Генерация предмета из подземелья
-        function generateDungeonItem() {
-            const rarity = getRandomRarity();
-            const type = getRandomItemType();
-            
-            return {
-                name: `${rarityConfig[rarity].name} ${type.name}`,
-                type: type.type,
-                stats: { [type.stat]: Math.floor(15 + Math.random() * 25) * rarityConfig[rarity].multiplier },
-                rarity: rarity
-            };
-        }
-
         // Вспомогательные функции
         function getRandomRarity() {
             const rarities = Object.keys(rarityConfig);
@@ -260,24 +275,6 @@
                 { name: 'Шлем', type: 'helmet', stat: 'hp' }
             ];
             return types[Math.floor(Math.random() * types.length)];
-        }
-
-        // Поход в подземелье
-        function exploreDungeon(difficulty) {
-            const rewards = {
-                exp: 50 * difficulty,
-                gold: 30 * difficulty,
-                item: generateDungeonItem() // Генерируем предмет
-            };
-
-            currentUser.exp += rewards.exp;
-            currentUser.gold += rewards.gold;
-            currentUser.inventory.push(rewards.item); // Добавляем в инвентарь
-            
-            checkLevelUp();
-            updateUI();
-            showRewardPopup(rewards);
-            saveGame();
         }
 
         // Проверка уровня
@@ -347,7 +344,7 @@
             `).join('');
         }
 
-        // Отображение магазина
+        // Отображение магазина (теперь таблица)
         function updateShop() {
             const container = document.getElementById('shop-items');
             container.innerHTML = currentUser.shop.map((item, index) => `
@@ -470,9 +467,12 @@
             setTimeout(() => popup.remove(), 3000);
         }
 
-        // Сохранение
+        // Сохранение данных через Telegram
         function saveGame() {
-            localStorage.setItem('gameData', JSON.stringify(currentUser));
+            Telegram.WebApp.sendData(JSON.stringify({
+                action: 'save_player_data',
+                data: currentUser
+            }));
         }
 
         // Переключение окон
