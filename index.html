@@ -7,16 +7,15 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Основные стили */
         body {
             background: linear-gradient(135deg, #1a1a1a, #2c3e50);
             min-height: 100vh;
             color: white;
             font-family: 'Arial', sans-serif;
             padding: 20px;
+            position: relative;
         }
 
-        /* Верхняя панель */
         #status-bar {
             position: fixed;
             top: 0;
@@ -29,7 +28,6 @@
             z-index: 1000;
         }
 
-        /* Подземелья */
         .dungeon-btn {
             background: linear-gradient(135deg, #3498db, #2980b9);
             border: none;
@@ -38,10 +36,13 @@
             width: 100%;
             cursor: pointer;
             transition: all 0.3s;
-            margin: 5px 0;
+            margin: 10px 0;
         }
 
-        /* Модальные окна */
+        .dungeon-btn:hover {
+            transform: scale(1.05);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -54,15 +55,6 @@
             align-items: center;
         }
 
-        .modal-content {
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 15px;
-            max-width: 600px;
-            width: 100%;
-        }
-
-        /* Предметы */
         .item-card {
             background: rgba(255,255,255,0.05);
             padding: 15px;
@@ -76,14 +68,22 @@
             transform: scale(1.02);
         }
 
-        /* Редкость предметов */
         .rarity-common { border-color: #808080; }
         .rarity-magic { border-color: #007bff; }
         .rarity-rare { border-color: #1eff00; }
         .rarity-epic { border-color: #ff00ff; }
         .rarity-legendary { border-color: #ffd700; }
 
-        /* Всплывающие уведомления */
+        #power-level {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2em;
+        }
+
         .reward-popup {
             position: fixed;
             top: 20px;
@@ -98,17 +98,6 @@
             from { transform: translateX(100%); }
             to { transform: translateX(0); }
         }
-
-        /* Мощь игрока */
-        #power-level {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.2em;
-        }
     </style>
 </head>
 <body>
@@ -119,7 +108,7 @@
         <div><i class="fas fa-bolt"></i> Опыт <span id="exp">0</span>/<span id="exp-needed">100</span></div>
     </div>
 
-    <!-- Кнопки подземелий -->
+    <!-- Подземелья -->
     <div class="dungeons-container">
         <button class="dungeon-btn" onclick="exploreDungeon(1)">
             <i class="fas fa-dungeon"></i> Подземелье 1
@@ -151,7 +140,7 @@
                 </select>
                 <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="inventory-items" class="item-grid"></div>
+            <div id="inventory-items"></div>
         </div>
     </div>
 
@@ -161,7 +150,7 @@
             <h2>🏪 Магазин 
                 <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="shop-items" class="item-grid"></div>
+            <div id="shop-items"></div>
         </div>
     </div>
 
@@ -179,6 +168,11 @@
         </div>
     </div>
 
+    <!-- Мощь игрока -->
+    <div id="power-level">
+        ⚡ Мощь: <span id="power-value">0</span>
+    </div>
+
     <script>
         let currentUser = {
             id: null,
@@ -188,7 +182,6 @@
                 armor: null,
                 helmet: null
             },
-            shop: generateShopItems(10), // Генерируем 10 предметов для магазина
             gold: 0,
             level: 1,
             exp: 0,
@@ -208,8 +201,17 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
+            // Загрузка сохранённых данных
             const savedData = localStorage.getItem('gameData');
-            if (savedData) Object.assign(currentUser, JSON.parse(savedData));
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                Object.assign(currentUser, {
+                    ...data,
+                    shop: generateShopItems(10) // Генерируем новый магазин при загрузке
+                });
+            } else {
+                currentUser.shop = generateShopItems(10);
+            }
             
             updateUI();
             calculatePower();
@@ -219,22 +221,46 @@
         function generateShopItems(count) {
             const items = [];
             for(let i = 0; i < count; i++) {
-                const rarityKeys = Object.keys(rarityConfig);
-                const rarity = rarityKeys[Math.floor(Math.random() * rarityKeys.length)];
+                const rarity = getRandomRarity();
+                const type = getRandomItemType();
                 
                 items.push({
-                    name: `${rarityConfig[rarity].name} ${['Меч', 'Щит', 'Шлем'][Math.floor(Math.random()*3)]}`,
-                    type: ['weapon', 'armor', 'helmet'][Math.floor(Math.random()*3)],
-                    price: Math.floor(100 * Math.random() * rarityConfig[rarity].multiplier),
-                    stats: {
-                        damage: Math.floor(10 * Math.random() * rarityConfig[rarity].multiplier),
-                        defense: Math.floor(5 * Math.random() * rarityConfig[rarity].multiplier),
-                        hp: Math.floor(15 * Math.random() * rarityConfig[rarity].multiplier)
-                    },
+                    name: `${rarityConfig[rarity].name} ${type.name}`,
+                    type: type.type,
+                    price: Math.floor(50 + Math.random() * 100) * rarityConfig[rarity].multiplier,
+                    stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
                     rarity: rarity
                 });
             }
             return items;
+        }
+
+        // Генерация случайного предмета
+        function generateItem() {
+            const rarity = getRandomRarity();
+            const type = getRandomItemType();
+            
+            return {
+                name: `${rarityConfig[rarity].name} ${type.name}`,
+                type: type.type,
+                stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
+                rarity: rarity
+            };
+        }
+
+        // Вспомогательные функции
+        function getRandomRarity() {
+            const rarities = Object.keys(rarityConfig);
+            return rarities[Math.floor(Math.random() * rarities.length)];
+        }
+
+        function getRandomItemType() {
+            const types = [
+                { name: 'Меч', type: 'weapon', stat: 'damage' },
+                { name: 'Щит', type: 'armor', stat: 'defense' },
+                { name: 'Шлем', type: 'helmet', stat: 'hp' }
+            ];
+            return types[Math.floor(Math.random() * types.length)];
         }
 
         // Поход в подземелье
@@ -253,23 +279,6 @@
             updateUI();
             showRewardPopup(rewards);
             saveGame();
-        }
-
-        // Генерация случайного предмета
-        function generateItem() {
-            const rarityKeys = Object.keys(rarityConfig);
-            const rarity = rarityKeys[Math.floor(Math.random() * rarityKeys.length)];
-            
-            return {
-                name: `${rarityConfig[rarity].name} Предмет`,
-                type: ['weapon', 'armor', 'helmet'][Math.floor(Math.random()*3)],
-                stats: {
-                    damage: Math.floor(10 * Math.random() * rarityConfig[rarity].multiplier),
-                    defense: Math.floor(5 * Math.random() * rarityConfig[rarity].multiplier),
-                    hp: Math.floor(15 * Math.random() * rarityConfig[rarity].multiplier)
-                },
-                rarity: rarity
-            };
         }
 
         // Проверка уровня
@@ -295,52 +304,23 @@
             document.getElementById('equipped-weapon').innerHTML = 
                 currentUser.equipped.weapon ? `
                     <i class="fas fa-sword"></i> ${currentUser.equipped.weapon.name}
-                    <div>Мощь: ${getItemPower(currentUser.equipped.weapon)}</div>
+                    <div>Урон: +${currentUser.equipped.weapon.stats.damage}</div>
                 ` : '<i class="fas fa-sword"></i> Оружие: -';
                 
             document.getElementById('equipped-armor').innerHTML = 
                 currentUser.equipped.armor ? `
                     <i class="fas fa-shield-alt"></i> ${currentUser.equipped.armor.name}
-                    <div>Мощь: ${getItemPower(currentUser.equipped.armor)}</div>
+                    <div>Защита: +${currentUser.equipped.armor.stats.defense}</div>
                 ` : '<i class="fas fa-shield-alt"></i> Броня: -';
                 
             document.getElementById('equipped-helmet').innerHTML = 
                 currentUser.equipped.helmet ? `
                     <i class="fas fa-helmet-safety"></i> ${currentUser.equipped.helmet.name}
-                    <div>Мощь: ${getItemPower(currentUser.equipped.helmet)}</div>
+                    <div>Здоровье: +${currentUser.equipped.helmet.stats.hp}</div>
                 ` : '<i class="fas fa-helmet-safety"></i> Шлем: -';
             
             updateInventory();
             updateShop();
-            calculatePower();
-        }
-
-        // Расчёт мощи
-        function calculatePower() {
-            let total = 0;
-            Object.values(currentUser.equipped).forEach(item => {
-                if (item) total += getItemPower(item);
-            });
-            document.getElementById('power-value').textContent = total;
-        }
-
-        // Мощь предмета
-        function getItemPower(item) {
-            return Object.values(item.stats).reduce((a, b) => a + b, 0);
-        }
-
-        // Сортировка инвентаря
-        function sortInventory() {
-            const type = document.getElementById('sort-select').value;
-            currentUser.inventory.sort((a, b) => {
-                if (type === 'rarity') {
-                    return Object.keys(rarityConfig).indexOf(b.rarity) - 
-                           Object.keys(rarityConfig).indexOf(a.rarity);
-                } else {
-                    return getItemPower(b) - getItemPower(a);
-                }
-            });
-            updateInventory();
         }
 
         // Отображение инвентаря
@@ -356,7 +336,7 @@
                     </div>
                     <div class="item-stats">
                         ${Object.entries(item.stats).map(([k, v]) => `
-                            <div>${k}: +${v}</div>
+                            <div>${k === 'damage' ? '⚔️' : k === 'defense' ? '🛡️' : '❤️'}${v}</div>
                         `).join('')}
                     </div>
                     <div class="item-actions">
@@ -380,7 +360,7 @@
                     </div>
                     <div class="item-stats">
                         ${Object.entries(item.stats).map(([k, v]) => `
-                            <div>${k}: +${v}</div>
+                            <div>${k === 'damage' ? '⚔️' : k === 'defense' ? '🛡️' : '❤️'}${v}</div>
                         `).join('')}
                     </div>
                     <button onclick="buyItem(${index})">Купить за ${item.price}</button>
@@ -397,6 +377,7 @@
             currentUser.equipped[item.type] = item;
             currentUser.inventory.splice(index, 1);
             
+            calculatePower();
             updateUI();
             saveGame();
         }
@@ -413,8 +394,8 @@
         // Цена предмета
         function getItemPrice(item) {
             return Math.round(
-                Object.values(item.stats).reduce((a, b) => a + b, 0) * 
-                rarityConfig[item.rarity].multiplier
+                Object.values(item.stats)[0] * 
+                rarityConfig[item.rarity].multiplier * 0.8
             );
         }
 
@@ -429,6 +410,29 @@
             } else {
                 alert("Недостаточно золота!");
             }
+        }
+
+        // Расчёт мощи
+        function calculatePower() {
+            let power = 0;
+            Object.values(currentUser.equipped).forEach(item => {
+                if (item) power += Object.values(item.stats)[0];
+            });
+            document.getElementById('power-value').textContent = power;
+        }
+
+        // Сортировка инвентаря
+        function sortInventory() {
+            const type = document.getElementById('sort-select').value;
+            currentUser.inventory.sort((a, b) => {
+                if (type === 'rarity') {
+                    return Object.keys(rarityConfig).indexOf(b.rarity) - 
+                           Object.keys(rarityConfig).indexOf(a.rarity);
+                } else {
+                    return Object.values(b.stats)[0] - Object.values(a.stats)[0];
+                }
+            });
+            updateInventory();
         }
 
         // Всплывающее окно наград
