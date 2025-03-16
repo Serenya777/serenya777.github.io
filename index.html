@@ -113,11 +113,9 @@
     <div class="dungeons-container">
         <button class="dungeon-btn" onclick="exploreDungeon(1)">
             <i class="fas fa-dungeon"></i> Подземелье 1
-            <div>Время: 1 час</div>
         </button>
         <button class="dungeon-btn" onclick="exploreDungeon(2)">
             <i class="fas fa-skull"></i> Подземелье 2
-            <div>Время: 2 часа</div>
         </button>
     </div>
 
@@ -175,7 +173,15 @@
     </div>
 
     <script>
-        let currentUser = {};
+        let currentUser = {
+            inventory: [],
+            equipped: { weapon: null, armor: null, helmet: null },
+            shop: [],
+            gold: 0,
+            level: 1,
+            exp: 0,
+            stats: { hp: 100, damage: 10 }
+        };
 
         const rarityConfig = {
             common: { color: '#808080', name: 'Обычный', multiplier: 1 },
@@ -196,7 +202,7 @@
             // Обрабатываем ответ от бота
             Telegram.WebApp.onEvent('web_app_data', (data) => {
                 const parsedData = JSON.parse(data.data);
-                currentUser = { ...parsedData };
+                currentUser = { ...currentUser, ...parsedData };
                 updateUI();
                 calculatePower();
             });
@@ -207,7 +213,7 @@
             const rewards = {
                 exp: 50 * difficulty,
                 gold: 30 * difficulty,
-                item: generateDungeonItem()
+                item: generateItem()
             };
 
             currentUser.exp += rewards.exp;
@@ -220,8 +226,8 @@
             saveGame();
         }
 
-        // Генерация предмета из подземелья
-        function generateDungeonItem() {
+        // Генерация предмета
+        function generateItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
             
@@ -306,7 +312,6 @@
             
             updateInventory();
             updateShop();
-            calculatePower();
         }
 
         // Отображение инвентаря
@@ -402,7 +407,7 @@
             }
         }
 
-        // Генерация одного предмета для магазина
+        // Генерация предмета для магазина
         function generateShopItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
