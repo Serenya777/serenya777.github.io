@@ -6,90 +6,7 @@
     <title>Dungeon Quest</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background: #1a1a1a;
-            color: white;
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2rem;
-            color: #FFD700;
-        }
-
-        .dungeons-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .dungeon-btn {
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 15px;
-            border: none;
-            color: white;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            min-height: 80px;
-        }
-
-        .dungeon-btn:hover {
-            background: #34495e;
-            transform: scale(1.05);
-        }
-
-        .item-card {
-            background: #2c3e50;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #result {
-            margin: 20px 0;
-            padding: 15px;
-            background: #34495e;
-            border-radius: 10px;
-            min-height: 100px;
-        }
-
-        @media (max-width: 480px) {
-            .dungeon-btn {
-                font-size: 1rem;
-                padding: 15px;
-                min-height: 70px;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
-        }
+        /* ... (оставить стили из предыдущего ответа без изменений) ... */
     </style>
 </head>
 <body>
@@ -110,68 +27,66 @@
     </div>
 
     <script>
-        // Инициализация
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
+        document.addEventListener('DOMContentLoaded', () => {
+            // Инициализация
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
 
-        // Локалка для теста
-        let currentItems = JSON.parse(localStorage.getItem('inventory') || [];
+            // Инициализация хранилища
+            let currentItems = JSON.parse(localStorage.getItem('inventory') || '[]');
 
-        // Вешаем обработчики на кнопки
-        document.querySelectorAll('.dungeon-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const duration = this.dataset.duration;
-                startDungeon(duration);
+            // Вешаем обработчики на кнопки
+            document.querySelectorAll('.dungeon-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const duration = parseInt(this.dataset.duration);
+                    startDungeon(duration);
+                });
             });
-        });
 
-        function startDungeon(duration) {
-            const resultDiv = document.getElementById("result");
-            resultDiv.innerHTML = `
-                <div class="loading">
-                    ⏳ Герой исследует подземелье...
-                </div>
-            `;
+            function startDungeon(duration) {
+                const resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = `<div class="loading">⏳ Герой в подземелье...</div>`;
 
-            setTimeout(() => {
-                const newItem = generateItem(duration);
-                currentItems.push(newItem);
-                localStorage.setItem('inventory', JSON.stringify(currentItems));
-
-                resultDiv.innerHTML = `
-                    <div class="success">
-                        🎉 Подземелье пройдено!
-                        <div class="item-card">
-                            <b>${newItem.name}</b>
-                            <div>🛡️ ${newItem.stats.defense}</div>
+                setTimeout(() => {
+                    const newItem = generateItem();
+                    currentItems.push(newItem);
+                    localStorage.setItem('inventory', JSON.stringify(currentItems));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            🎉 Подземелье пройдено!
+                            <div class="item-card">
+                                <b>${newItem.name}</b>
+                                <div>🛡️ ${newItem.stats.defense}</div>
+                            </div>
                         </div>
+                    `;
+                    updateInventory();
+                }, 1000);
+            }
+
+            function generateItem() {
+                const prefixes = ["Ржавый", "Мистический", "Легендарный"];
+                const types = ["Меч", "Щит", "Шлем"];
+                return {
+                    id: Date.now(),
+                    name: `${prefixes[Math.floor(Math.random() * 3)]} ${types[Math.floor(Math.random() * 3)]}`,
+                    stats: { defense: Math.floor(Math.random() * 20) + 1 }
+                };
+            }
+
+            function updateInventory() {
+                const list = document.getElementById("items-list");
+                list.innerHTML = currentItems.map(item => `
+                    <div class="item-card">
+                        <div>${item.name}</div>
+                        <div>🛡️ ${item.stats.defense}</div>
                     </div>
-                `;
-                updateInventory();
-            }, 1000);
-        }
+                `).join("");
+            }
 
-        function generateItem() {
-            const prefixes = ["Ржавый", "Мистический", "Легендарный"];
-            const types = ["Меч", "Щит", "Шлем"];
-            return {
-                id: Date.now(),
-                name: `${prefixes[Math.floor(Math.random() * 3)]} ${types[Math.floor(Math.random() * 3)]}`,
-                stats: { defense: Math.floor(Math.random() * 20) + 1 }
-            };
-        }
-
-        function updateInventory() {
-            const list = document.getElementById("items-list");
-            list.innerHTML = currentItems.map(item => `
-                <div class="item-card">
-                    <div>${item.name}</div>
-                    <div>🛡️ ${item.stats.defense}</div>
-                </div>
-            `).join("");
-        }
-
-        updateInventory();
+            updateInventory();
+        });
     </script>
 </body>
 </html>
