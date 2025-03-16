@@ -5,20 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dungeon Quest</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Основные стили */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Новые стили */
         body {
-            background: #1a1a1a;
-            color: white;
-            font-family: Arial, sans-serif;
-            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a, #2c3e50);
             min-height: 100vh;
+            padding: 20px;
+            color: white;
+            font-family: 'Arial', sans-serif;
         }
 
         .container {
@@ -28,121 +23,141 @@
 
         /* Панель игрока */
         .player-info {
-            background: #2c3e50;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            background: rgba(44, 62, 80, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .stat-block {
+            background: rgba(255,255,255,0.1);
             padding: 15px;
             border-radius: 10px;
-            margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-
-        /* Кнопки подземелий */
-        .dungeons-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .dungeon-btn {
-            background: #3498db;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
+            flex: 1;
+            text-align: center;
             transition: transform 0.2s;
+        }
+
+        .stat-block:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Подземелья */
+        .dungeon-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .dungeon-btn:hover {
             transform: scale(1.05);
         }
 
+        .dungeon-btn::after {
+            content: '>';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            color: white;
+        }
+
         /* Инвентарь */
-        .item-card {
-            background: #34495e;
+        .inventory-item {
+            background: rgba(255,255,255,0.05);
             padding: 10px;
-            margin: 5px 0;
             border-radius: 8px;
+            margin: 5px 0;
             display: flex;
             justify-content: space-between;
-            animation: itemAppear 0.5s ease;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+
+        .inventory-item:hover {
+            transform: scale(1.02);
+        }
+
+        /* Магазин */
+        .shop-item {
+            background: rgba(255,215,0,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .shop-item:hover {
+            background: rgba(255,215,0,0.2);
         }
 
         /* Анимации */
-        @keyframes itemAppear {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes goldShine {
+            0% { text-shadow: 0 0 5px gold; }
+            50% { text-shadow: 0 0 20px gold; }
+            100% { text-shadow: 0 0 5px gold; }
         }
 
-        @keyframes levelUp {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        .level-up {
-            animation: levelUp 1s;
-            color: #f1c40f;
-        }
-
-        /* Торговая площадка */
-        .trade-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .trade-content {
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 600px;
+        .gold-anim {
+            animation: goldShine 1s;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Панель характеристик -->
+        <!-- Панель игрока -->
         <div class="player-info">
-            <div>
-                <div>🔰 Уровень <span id="level">1</span></div>
-                <div>⚡ Опыт <span id="exp">0</span>/<span id="exp-needed">100</span></div>
+            <div class="stat-block">
+                <i class="fas fa-user"></i>
+                <div>Уровень <span id="level">1</span></div>
             </div>
-            <div>
-                <div>❤️ Здоровье <span id="hp">100</span></div>
-                <div>⚔️ Урон <span id="damage">10</span></div>
+            <div class="stat-block">
+                <i class="fas fa-coins"></i>
+                <div>Золото <span id="gold" class="gold-anim">0</span></div>
+            </div>
+            <div class="stat-block">
+                <i class="fas fa-heart"></i>
+                <div>Здоровье <span id="hp">100</span></div>
+            </div>
+            <div class="stat-block">
+                <i class="fas fa-sword"></i>
+                <div>Урон <span id="damage">10</span></div>
             </div>
         </div>
 
         <!-- Подземелья -->
         <div class="dungeons-container">
-            <button class="dungeon-btn" data-duration="1">🏰 1 час</button>
-            <button class="dungeon-btn" data-duration="2">🏰 2 часа</button>
+            <button class="dungeon-btn" onclick="exploreDungeon(1)">
+                <i class="fas fa-dungeon"></i> Подземелье 1
+                <div>Время: 1 час</div>
+            </button>
+            <button class="dungeon-btn" onclick="exploreDungeon(2)">
+                <i class="fas fa-skull"></i> Подземелье 2
+                <div>Время: 2 часа</div>
+            </button>
         </div>
 
         <!-- Инвентарь -->
-        <div id="inventory">
-            <h2>🎒 Инвентарь <button onclick="openTrade()">🔄 Обмен</button></h2>
-            <div id="items-list"></div>
+        <div class="inventory">
+            <h2>🎒 Инвентарь <button onclick="openShop()">🛒 Магазин</button></h2>
+            <div id="inventory-items"></div>
         </div>
 
-        <!-- Модалка торговли -->
-        <div class="trade-modal" id="tradeModal">
-            <div class="trade-content">
-                <h3>🎪 Торговая площадка</h3>
-                <div id="trade-items"></div>
-                <button onclick="confirmTrade()">✅ Подтвердить</button>
-                <button onclick="closeTrade()">❌ Отмена</button>
-            </div>
+        <!-- Магазин -->
+        <div id="shop" style="display:none">
+            <h2>🏪 Магазин <button onclick="closeShop()">❌ Закрыть</button></h2>
+            <div id="shop-items"></div>
         </div>
     </div>
 
@@ -150,6 +165,11 @@
         let currentUser = {
             id: null,
             inventory: [],
+            shop: [
+                { name: "Меч новичка", price: 50, stats: { damage: 10 } },
+                { name: "Щит новичка", price: 30, stats: { defense: 5 } }
+            ],
+            gold: 0,
             level: 1,
             exp: 0,
             stats: { hp: 100, damage: 10 }
@@ -160,126 +180,152 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
-            // Загрузка данных
+            // Загрузка сохранённых данных
             const savedData = localStorage.getItem('gameData');
-            if(savedData) currentUser = JSON.parse(savedData);
+            if (savedData) Object.assign(currentUser, JSON.parse(savedData));
             
             updateUI();
-            initDungeons();
         });
 
-        // Подземелья
-        function initDungeons() {
-            document.querySelectorAll('.dungeon-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const duration = parseInt(this.dataset.duration);
-                    startDungeon(duration);
-                });
-            });
+        // Подземелье
+        function exploreDungeon(difficulty) {
+            const rewards = {
+                exp: 50 * difficulty,
+                gold: 30 * difficulty,
+                item: generateItem()
+            };
+
+            // Обновление данных
+            currentUser.exp += rewards.exp;
+            currentUser.gold += rewards.gold;
+            currentUser.inventory.push(rewards.item);
+            
+            // Проверка уровня
+            checkLevelUp();
+            
+            // Сохранение и обновление интерфейса
+            saveGame();
+            updateUI();
+            showRewardPopup(rewards);
         }
 
-        function startDungeon(duration) {
-            // Симуляция боя
-            setTimeout(() => {
-                const newItem = generateItem();
-                currentUser.inventory.push(newItem);
-                
-                // Начисление опыта
-                currentUser.exp += duration * 50;
-                checkLevelUp();
-                
-                // Сохранение и обновление
-                saveGame();
-                updateUI();
-                showResult(newItem);
-            }, 1000);
-        }
-
-        // Генерация предмета
+        // Генерация предметов
         function generateItem() {
-            const prefixes = ['Ржавый', 'Мистический', 'Легендарный'];
-            const types = ['Меч', 'Щит', 'Шлем'];
+            const types = [
+                { name: "Меч", icon: "fas fa-sword", stats: { damage: 10 } },
+                { name: "Щит", icon: "fas fa-shield-alt", stats: { defense: 5 } },
+                { name: "Шлем", icon: "fas fa-helmet-safety", stats: { hp: 15 } }
+            ];
+            const randomType = types[Math.floor(Math.random() * types.length)];
             return {
-                name: `${prefixes[Math.floor(Math.random()*3)]} ${types[Math.floor(Math.random()*3)]}`,
-                stats: {
-                    defense: Math.floor(Math.random()*20)+1,
-                    damage: Math.floor(Math.random()*10)+1
-                }
+                name: randomType.name,
+                icon: randomType.icon,
+                stats: randomType.stats
             };
         }
 
-        // Система уровней
-        function checkLevelUp() {
-            const needed = getExpToNextLevel(currentUser.level);
+        // Магазин
+        function openShop() {
+            document.querySelector('.inventory').style.display = 'none';
+            document.getElementById('shop').style.display = 'block';
             
-            while(currentUser.exp >= needed) {
-                currentUser.exp -= needed;
-                currentUser.level++;
-                
-                // Улучшение характеристик
-                currentUser.stats.hp += 20;
-                currentUser.stats.damage += 5;
-                
-                // Анимация
-                document.getElementById('level').classList.add('level-up');
-                setTimeout(() => {
-                    document.getElementById('level').classList.remove('level-up');
-                }, 1000);
+            const shopHTML = currentUser.shop.map(item => `
+                <div class="shop-item" onclick="buyItem(${currentUser.shop.indexOf(item)})">
+                    <i class="${item.icon}"></i> ${item.name}
+                    <div>Цена: ${item.price} <i class="fas fa-coins"></i></div>
+                    <div>Характеристики: ${Object.entries(item.stats).map(([k, v]) => `${k}: +${v}`).join(', ')}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('shop-items').innerHTML = shopHTML;
+        }
+
+        function buyItem(index) {
+            const item = currentUser.shop[index];
+            if (currentUser.gold >= item.price) {
+                currentUser.gold -= item.price;
+                currentUser.inventory.push(item);
+                saveGame();
+                updateUI();
+                alert(`Вы купили ${item.name}!`);
+            } else {
+                alert("Недостаточно золота!");
             }
         }
 
-        function getExpToNextLevel(level) {
-            return 100 * Math.pow(2, level-1);
-        }
-
-        // Торговля
-        function openTrade() {
-            document.getElementById('tradeModal').style.display = 'flex';
-            // Здесь должна быть логика загрузки данных торговли
-        }
-
-        function confirmTrade() {
-            // Логика подтверждения обмена
-            closeTrade();
-        }
-
-        function closeTrade() {
-            document.getElementById('tradeModal').style.display = 'none';
+        function closeShop() {
+            document.getElementById('shop').style.display = 'none';
+            document.querySelector('.inventory').style.display = 'block';
         }
 
         // Обновление интерфейса
         function updateUI() {
             document.getElementById('level').textContent = currentUser.level;
-            document.getElementById('exp').textContent = currentUser.exp;
-            document.getElementById('exp-needed').textContent = getExpToNextLevel(currentUser.level);
+            document.getElementById('gold').textContent = currentUser.gold;
             document.getElementById('hp').textContent = currentUser.stats.hp;
             document.getElementById('damage').textContent = currentUser.stats.damage;
             
-            // Обновление инвентаря
-            const itemsList = document.getElementById('items-list');
-            itemsList.innerHTML = currentUser.inventory.map(item => `
-                <div class="item-card">
-                    <div>${item.name}</div>
-                    <div>🛡️${item.stats.defense} ⚔️${item.stats.damage}</div>
+            // Инвентарь
+            const inventoryHTML = currentUser.inventory.map(item => `
+                <div class="inventory-item">
+                    <i class="${item.icon}"></i> ${item.name}
+                    <div>${Object.entries(item.stats).map(([k, v]) => `${k}: +${v}`).join(' | ')}</div>
                 </div>
             `).join('');
+            document.getElementById('inventory-items').innerHTML = inventoryHTML;
         }
 
-        function showResult(item) {
-            const resultHTML = `
-                <div class="item-card" style="margin-top:20px;">
-                    🎉 Получено: 
-                    <b>${item.name}</b>
-                    (🛡️${item.stats.defense} ⚔️${item.stats.damage})
-                </div>
-            `;
-            document.getElementById('inventory').insertAdjacentHTML('beforeend', resultHTML);
+        // Проверка уровня
+        function checkLevelUp() {
+            const needed = 100 * (2 ** (currentUser.level - 1));
+            if (currentUser.exp >= needed) {
+                currentUser.level++;
+                currentUser.exp = 0;
+                currentUser.stats.hp += 20;
+                currentUser.stats.damage += 5;
+                alert(`Поздравляем! Вы достигли уровня ${currentUser.level}`);
+            }
         }
 
-        // Сохранение игры
+        // Сохранение
         function saveGame() {
             localStorage.setItem('gameData', JSON.stringify(currentUser));
         }
+
+        // Показ наград
+        function showRewardPopup(rewards) {
+            const popup = document.createElement('div');
+            popup.className = 'reward-popup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <i class="fas fa-trophy"></i>
+                    <div>Получено:</div>
+                    <div>Опыт: +${rewards.exp}</div>
+                    <div>Золото: +${rewards.gold}</div>
+                    <div>Предмет: ${rewards.item.name}</div>
+                </div>
+            `;
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 3000);
+        }
     </script>
+
+    <style>
+        /* Всплывающее окно наград */
+        .reward-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
 </body>
 </html>
