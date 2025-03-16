@@ -61,7 +61,7 @@
             color: white;
         }
 
-        #inventory-modal, #shop-modal {
+        .modal {
             display: none;
             position: fixed;
             top: 0;
@@ -77,21 +77,29 @@
             background: #2c3e50;
             padding: 20px;
             border-radius: 15px;
-            max-width: 400px;
+            max-width: 600px;
+            width: 100%;
         }
 
-        .item-slot {
+        .item-card {
             background: rgba(255,255,255,0.05);
             padding: 10px;
             border-radius: 8px;
             margin: 5px 0;
             cursor: pointer;
             transition: transform 0.2s;
+            border: 2px solid transparent;
         }
 
-        .item-slot:hover {
+        .item-card:hover {
             transform: scale(1.02);
         }
+
+        .rarity-common { border-color: #808080; }
+        .rarity-magic { border-color: #007bff; }
+        .rarity-rare { border-color: #1eff00; }
+        .rarity-epic { border-color: #ff00ff; }
+        .rarity-legendary { border-color: #ffd700; }
 
         #power-level {
             position: fixed;
@@ -106,6 +114,13 @@
 
         @keyframes glow {
             50% { text-shadow: 0 0 10px gold; }
+        }
+
+        .equipped-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -140,38 +155,40 @@
     </div>
 
     <!-- Модальное окно инвентаря -->
-    <div id="inventory-modal">
+    <div id="inventory-modal" class="modal">
         <div class="modal-content">
-            <h2>🎒 Инвентарь</h2>
-            <div id="inventory-items"></div>
-            <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
+            <h2>🎒 Инвентарь 
+                <select id="sort-select" onchange="sortInventory()">
+                    <option value="rarity">По редкости</option>
+                    <option value="power">По мощи</option>
+                </select>
+                <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
+            </h2>
+            <div id="inventory-items" class="item-grid"></div>
         </div>
     </div>
 
     <!-- Модальное окно магазина -->
-    <div id="shop-modal">
+    <div id="shop-modal" class="modal">
         <div class="modal-content">
-            <h2>🏪 Магазин</h2>
-            <div id="shop-items"></div>
-            <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
+            <h2>🏪 Магазин 
+                <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
+            </h2>
+            <div id="shop-items" class="item-grid"></div>
         </div>
     </div>
 
-    <!-- Слоты экипировки -->
+    <!-- Экипировка -->
     <div style="margin-top: 80px;">
-        <div class="equipped-items">
-            <div class="item-slot" onclick="showEquip('weapon')">
-                <i class="fas fa-sword"></i> Оружие
-                <div id="equipped-weapon">-</div>
-            </div>
-            <div class="item-slot" onclick="showEquip('armor')">
-                <i class="fas fa-shield-alt"></i> Броня
-                <div id="equipped-armor">-</div>
-            </div>
-            <div class="item-slot" onclick="showEquip('helmet')">
-                <i class="fas fa-helmet-safety"></i> Шлем
-                <div id="equipped-helmet">-</div>
-            </div>
+        <h3>🛡️ Экипировка</h3>
+        <div class="equipped-item" id="equipped-weapon">
+            <i class="fas fa-sword"></i> Оружие: -
+        </div>
+        <div class="equipped-item" id="equipped-armor">
+            <i class="fas fa-shield-alt"></i> Броня: -
+        </div>
+        <div class="equipped-item" id="equipped-helmet">
+            <i class="fas fa-helmet-safety"></i> Шлем: -
         </div>
     </div>
 
@@ -190,14 +207,22 @@
                 helmet: null
             },
             shop: [
-                { name: "Меч новичка", type: "weapon", price: 50, stats: { damage: 10 } },
-                { name: "Щит новичка", type: "armor", price: 30, stats: { defense: 5 } },
-                { name: "Шлем новичка", type: "helmet", price: 40, stats: { hp: 15 } }
+                { name: "Меч новичка", type: "weapon", price: 50, stats: { damage: 10 }, rarity: "common" },
+                { name: "Щит новичка", type: "armor", price: 30, stats: { defense: 5 }, rarity: "common" },
+                { name: "Шлем новичка", type: "helmet", price: 40, stats: { hp: 15 }, rarity: "common" }
             ],
             gold: 0,
             level: 1,
             exp: 0,
             stats: { hp: 100, damage: 10 }
+        };
+
+        const rarityColors = {
+            common: { color: '#808080', name: 'Обычный' },
+            magic: { color: '#007bff', name: 'Волшебный' },
+            rare: { color: '#1eff00', name: 'Редкий' },
+            epic: { color: '#ff00ff', name: 'Эпический' },
+            legendary: { color: '#ffd700', name: 'Легендарный' }
         };
 
         // Инициализация
@@ -210,7 +235,6 @@
             
             updateUI();
             calculatePower();
-            updateShop();
         });
 
         // Переключение инвентаря
@@ -231,11 +255,23 @@
         function updateInventory() {
             const container = document.getElementById('inventory-items');
             container.innerHTML = currentUser.inventory.map((item, index) => `
-                <div class="item-slot">
-                    <i class="${item.icon}"></i> ${item.name}
-                    <div>${Object.entries(item.stats).map(([k, v]) => `${k}: +${v}`).join(' | ')}</div>
-                    <button onclick="equipItem(${index})">Надеть</button>
-                    <button onclick="sellItem(${index})">Продать за ${getItemPrice(item)}</button>
+                <div class="item-card ${getRarityClass(item.rarity)}" 
+                     onclick="showItemDetails(${index})">
+                    <div class="item-header">
+                        <span>${item.name}</span>
+                        <span style="color: ${rarityColors[item.rarity].color}">
+                            ${rarityColors[item.rarity].name}
+                        </span>
+                    </div>
+                    <div class="item-stats">
+                        ${Object.entries(item.stats).map(([k, v]) => `
+                            <div>${k}: +${v}</div>
+                        `).join('')}
+                    </div>
+                    <div class="item-actions">
+                        <button onclick="equipItem(${index})">Надеть</button>
+                        <button onclick="sellItem(${index})">Продать за ${getItemPrice(item)}</button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -244,9 +280,18 @@
         function updateShop() {
             const container = document.getElementById('shop-items');
             container.innerHTML = currentUser.shop.map((item, index) => `
-                <div class="item-slot">
-                    <i class="${item.icon}"></i> ${item.name}
-                    <div>${Object.entries(item.stats).map(([k, v]) => `${k}: +${v}`).join(' | ')}</div>
+                <div class="item-card ${getRarityClass(item.rarity)}">
+                    <div class="item-header">
+                        <span>${item.name}</span>
+                        <span style="color: ${rarityColors[item.rarity].color}">
+                            ${rarityColors[item.rarity].name}
+                        </span>
+                    </div>
+                    <div class="item-stats">
+                        ${Object.entries(item.stats).map(([k, v]) => `
+                            <div>${k}: +${v}</div>
+                        `).join('')}
+                    </div>
                     <button onclick="buyItem(${index})">Купить за ${item.price}</button>
                 </div>
             `).join('');
@@ -314,21 +359,87 @@
             document.getElementById('exp-needed').textContent = getExpToNextLevel(currentUser.level);
             
             // Обновление экипировки
-            document.getElementById('equipped-weapon').textContent = 
-                currentUser.equipped.weapon ? currentUser.equipped.weapon.name : '-';
-            document.getElementById('equipped-armor').textContent = 
-                currentUser.equipped.armor ? currentUser.equipped.armor.name : '-';
-            document.getElementById('equipped-helmet').textContent = 
-                currentUser.equipped.helmet ? currentUser.equipped.helmet.name : '-';
+            document.getElementById('equipped-weapon').innerHTML = 
+                currentUser.equipped.weapon ? `
+                    <i class="fas fa-sword"></i> Оружие: ${currentUser.equipped.weapon.name}
+                    <div>Мощь: ${getItemPower(currentUser.equipped.weapon)}</div>
+                ` : '<i class="fas fa-sword"></i> Оружие: -';
+                
+            document.getElementById('equipped-armor').innerHTML = 
+                currentUser.equipped.armor ? `
+                    <i class="fas fa-shield-alt"></i> Броня: ${currentUser.equipped.armor.name}
+                    <div>Мощь: ${getItemPower(currentUser.equipped.armor)}</div>
+                ` : '<i class="fas fa-shield-alt"></i> Броня: -';
+                
+            document.getElementById('equipped-helmet').innerHTML = 
+                currentUser.equipped.helmet ? `
+                    <i class="fas fa-helmet-safety"></i> Шлем: ${currentUser.equipped.helmet.name}
+                    <div>Мощь: ${getItemPower(currentUser.equipped.helmet)}</div>
+                ` : '<i class="fas fa-helmet-safety"></i> Шлем: -';
             
             // Обновление инвентаря и магазина
             updateInventory();
             updateShop();
         }
 
-        // Сохранение
-        function saveGame() {
-            localStorage.setItem('gameData', JSON.stringify(currentUser));
+        // Сортировка инвентаря
+        function sortInventory() {
+            const sortType = document.getElementById('sort-select').value;
+            currentUser.inventory.sort((a, b) => {
+                if (sortType === 'rarity') {
+                    return getRarityOrder(b.rarity) - getRarityOrder(a.rarity);
+                } else {
+                    return getItemPower(b) - getItemPower(a);
+                }
+            });
+            updateInventory();
+        }
+
+        // Мощь предмета
+        function getItemPower(item) {
+            return Object.values(item.stats).reduce((a, b) => a + b, 0);
+        }
+
+        // Порядок редкости
+        function getRarityOrder(rarity) {
+            const order = { common: 1, magic: 2, rare: 3, epic: 4, legendary: 5 };
+            return order[rarity];
+        }
+
+        // Класс для стилизации
+        function getRarityClass(rarity) {
+            return `rarity-${rarity}`;
+        }
+
+        // Генерация предметов
+        function generateItem() {
+            const rarities = ['common', 'magic', 'rare', 'epic', 'legendary'];
+            const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+            const types = [
+                { name: "Меч", type: "weapon", stats: { damage: 10 } },
+                { name: "Щит", type: "armor", stats: { defense: 5 } },
+                { name: "Шлем", type: "helmet", stats: { hp: 15 } }
+            ];
+            
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            const stats = {};
+            
+            // Увеличиваем характеристики в зависимости от редкости
+            Object.keys(randomType.stats).forEach(key => {
+                stats[key] = Math.round(randomType.stats[key] * (1 + getRarityOrder(rarity)*0.5));
+            });
+            
+            return {
+                name: `${getRarityName(rarity)} ${randomType.name}`,
+                type: randomType.type,
+                stats: stats,
+                rarity: rarity
+            };
+        }
+
+        // Название редкости
+        function getRarityName(rarity) {
+            return rarityColors[rarity].name;
         }
 
         // Поход в подземелье
@@ -347,21 +458,6 @@
             updateUI();
             showRewardPopup(rewards);
             saveGame();
-        }
-
-        // Генерация предметов
-        function generateItem() {
-            const types = [
-                { name: "Меч", icon: "fas fa-sword", stats: { damage: 10 } },
-                { name: "Щит", icon: "fas fa-shield-alt", stats: { defense: 5 } },
-                { name: "Шлем", icon: "fas fa-helmet-safety", stats: { hp: 15 } }
-            ];
-            const randomType = types[Math.floor(Math.random() * types.length)];
-            return {
-                name: randomType.name,
-                icon: randomType.icon,
-                stats: randomType.stats
-            };
         }
 
         // Проверка уровня
@@ -392,6 +488,11 @@
             document.body.appendChild(popup);
             setTimeout(() => popup.remove(), 3000);
         }
+
+        // Сохранение
+        function saveGame() {
+            localStorage.setItem('gameData', JSON.stringify(currentUser));
+        }
     </script>
 
     <style>
@@ -408,6 +509,32 @@
         @keyframes slideIn {
             from { transform: translateX(100%); }
             to { transform: translateX(0); }
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .item-card {
+            padding: 15px;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .item-stats {
+            margin: 10px 0;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
         }
     </style>
 </body>
