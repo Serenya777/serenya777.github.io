@@ -13,7 +13,6 @@
             color: white;
             font-family: 'Arial', sans-serif;
             padding: 20px;
-            position: relative;
         }
 
         #status-bar {
@@ -35,12 +34,7 @@
             border-radius: 12px;
             width: 100%;
             cursor: pointer;
-            transition: all 0.3s;
             margin: 10px 0;
-        }
-
-        .dungeon-btn:hover {
-            transform: scale(1.05);
         }
 
         .modal {
@@ -61,11 +55,6 @@
             border-radius: 8px;
             margin: 10px 0;
             border: 2px solid transparent;
-            transition: transform 0.2s;
-        }
-
-        .item-card:hover {
-            transform: scale(1.02);
         }
 
         .rarity-common { border-color: #808080; }
@@ -207,6 +196,7 @@
             if (savedData) {
                 const data = JSON.parse(savedData);
                 currentUser = {
+                    ...currentUser,
                     ...data,
                     shop: data.shop || generateShopItems(10)
                 };
@@ -236,7 +226,7 @@
             return items;
         }
 
-        // Генерация случайного предмета из подземелья
+        // Генерация предмета из подземелья
         function generateDungeonItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
@@ -274,7 +264,7 @@
 
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
-            currentUser.inventory.push(rewards.item); // Добавляем предмет
+            currentUser.inventory.push(rewards.item); // Добавляем в инвентарь
             
             checkLevelUp();
             updateUI();
@@ -305,19 +295,19 @@
             document.getElementById('equipped-weapon').innerHTML = 
                 currentUser.equipped.weapon ? `
                     <i class="fas fa-sword"></i> ${currentUser.equipped.weapon.name}
-                    <div>⚔️ Урон: +${currentUser.equipped.weapon.stats.damage}</div>
+                    <div>⚔️ +${currentUser.equipped.weapon.stats.damage}</div>
                 ` : '<i class="fas fa-sword"></i> Оружие: -';
                 
             document.getElementById('equipped-armor').innerHTML = 
                 currentUser.equipped.armor ? `
                     <i class="fas fa-shield-alt"></i> ${currentUser.equipped.armor.name}
-                    <div>🛡️ Защита: +${currentUser.equipped.armor.stats.defense}</div>
+                    <div>🛡️ +${currentUser.equipped.armor.stats.defense}</div>
                 ` : '<i class="fas fa-shield-alt"></i> Броня: -';
                 
             document.getElementById('equipped-helmet').innerHTML = 
                 currentUser.equipped.helmet ? `
                     <i class="fas fa-helmet-safety"></i> ${currentUser.equipped.helmet.name}
-                    <div>❤️ Здоровье: +${currentUser.equipped.helmet.stats.hp}</div>
+                    <div>❤️ +${currentUser.equipped.helmet.stats.hp}</div>
                 ` : '<i class="fas fa-helmet-safety"></i> Шлем: -';
             
             updateInventory();
