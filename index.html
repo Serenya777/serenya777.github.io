@@ -68,13 +68,6 @@
         .rarity-epic { border-color: #ff00ff; }
         .rarity-legendary { border-color: #ffd700; }
 
-        .item-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            padding: 20px;
-        }
-
         #power-level {
             position: fixed;
             bottom: 20px;
@@ -139,7 +132,7 @@
                 </select>
                 <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="inventory-items" class="item-grid"></div>
+            <div id="inventory-items"></div>
         </div>
     </div>
 
@@ -149,7 +142,7 @@
             <h2>🏪 Магазин 
                 <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="shop-items" class="item-grid"></div>
+            <div id="shop-items"></div>
         </div>
     </div>
 
@@ -176,7 +169,6 @@
         let currentUser = {
             inventory: [],
             equipped: { weapon: null, armor: null, helmet: null },
-            shop: [],
             gold: 0,
             level: 1,
             exp: 0,
@@ -196,19 +188,17 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Запрашиваем данные у бота
-            Telegram.WebApp.sendData(JSON.stringify({ action: 'get_player_data' }));
+            // Получаем данные от бота
+            const initData = Telegram.WebApp.initDataUnsafe;
+            if (initData.user) {
+                currentUser = JSON.parse(initData.user);
+            }
 
-            // Обрабатываем ответ от бота
-            Telegram.WebApp.onEvent('web_app_data', (data) => {
-                const parsedData = JSON.parse(data.data);
-                currentUser = { ...currentUser, ...parsedData };
-                if (!currentUser.shop.length) {
-                    currentUser.shop = generateShopItems(10);
-                }
-                updateUI();
-                calculatePower();
-            });
+            // Генерируем магазин
+            currentUser.shop = generateShopItems(10);
+            
+            updateUI();
+            calculatePower();
         });
 
         // Поход в подземелье
@@ -242,7 +232,7 @@
             };
         }
 
-        // Генерация предметов для магазина
+        // Генерация магазина
         function generateShopItems(count) {
             const items = [];
             for(let i = 0; i < count; i++) {
@@ -466,10 +456,7 @@
 
         // Сохранение данных
         function saveGame() {
-            Telegram.WebApp.sendData(JSON.stringify({
-                action: 'save_player_data',
-                data: currentUser
-            }));
+            Telegram.WebApp.sendData(JSON.stringify(currentUser));
         }
 
         // Переключение окон
