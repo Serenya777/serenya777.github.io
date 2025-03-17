@@ -68,6 +68,22 @@
         .rarity-epic { border-color: #ff00ff; }
         .rarity-legendary { border-color: #ffd700; }
 
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px;
+        }
+
         #power-level {
             position: fixed;
             bottom: 20px;
@@ -125,14 +141,14 @@
     <!-- Модальное окно инвентаря -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
-            <h2>🎒 Инвентарь 
+            <h2>🎒 Инвентарь (макс. 50) 
                 <select id="sort-select" onchange="sortInventory()">
                     <option value="rarity">По редкости</option>
                     <option value="power">По мощи</option>
                 </select>
                 <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="inventory-items"></div>
+            <div id="inventory-items" class="inventory-grid"></div>
         </div>
     </div>
 
@@ -142,7 +158,7 @@
             <h2>🏪 Магазин 
                 <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
             </h2>
-            <div id="shop-items"></div>
+            <div id="shop-items" class="shop-grid"></div>
         </div>
     </div>
 
@@ -166,14 +182,7 @@
     </div>
 
     <script>
-        let currentUser = {
-            inventory: [],
-            equipped: { weapon: null, armor: null, helmet: null },
-            gold: 0,
-            level: 1,
-            exp: 0,
-            stats: { hp: 100, damage: 10 }
-        };
+        let currentUser = {};
 
         const rarityConfig = {
             common: { color: '#808080', name: 'Обычный', multiplier: 1 },
@@ -188,15 +197,23 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Получаем данные от бота
+            // Получаем данные из бота
             const initData = Telegram.WebApp.initDataUnsafe;
             if (initData.user) {
                 currentUser = JSON.parse(initData.user);
             }
 
-            // Генерируем магазин
-            currentUser.shop = generateShopItems(10);
-            
+            // Создаем структуру если не существует
+            currentUser = {
+                inventory: currentUser.inventory || [],
+                equipped: currentUser.equipped || { weapon: null, armor: null, helmet: null },
+                shop: currentUser.shop || generateShopItems(10),
+                gold: currentUser.gold || 0,
+                level: currentUser.level || 1,
+                exp: currentUser.exp || 0,
+                stats: currentUser.stats || { hp: 100, damage: 10 }
+            };
+
             updateUI();
             calculatePower();
         });
@@ -211,7 +228,13 @@
 
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
-            currentUser.inventory.push(rewards.item);
+            
+            // Ограничение инвентаря 50 предметами
+            if (currentUser.inventory.length < 50) {
+                currentUser.inventory.push(rewards.item);
+            } else {
+                alert("Инвентарь переполнен!");
+            }
 
             checkLevelUp();
             updateUI();
@@ -388,11 +411,12 @@
             const item = currentUser.shop[index];
             if (currentUser.gold >= item.price) {
                 currentUser.gold -= item.price;
-                currentUser.inventory.push(item);
-                
-                // Генерируем новый предмет для магазина
-                currentUser.shop[index] = generateShopItem();
-                
+                if (currentUser.inventory.length < 50) {
+                    currentUser.inventory.push(item);
+                    currentUser.shop[index] = generateShopItem();
+                } else {
+                    alert("Инвентарь переполнен!");
+                }
                 updateUI();
                 saveGame();
             } else {
@@ -474,6 +498,12 @@
         function getRarityClass(rarity) {
             return `rarity-${rarity}`;
         }
+
+        // Сохранение при закрытии
+        Telegram.WebApp.onEvent('mainButtonClicked', () => {
+            saveGame();
+            Telegram.WebApp.close();
+        });
     </script>
 </body>
 </html>
