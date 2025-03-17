@@ -7,7 +7,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Адаптивный дизайн */
         body {
             background: linear-gradient(135deg, #1a1a1a, #2c3e50);
             min-height: 100vh;
@@ -47,9 +46,18 @@
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.9);
-            justify-content: center;
+            justify-content: flex-start;
             align-items: flex-start;
             overflow-y: auto;
+        }
+
+        .modal-content {
+            background: rgba(255,255,255,0.1);
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            width: calc(100% - 40px);
+            max-width: 600px;
         }
 
         .item-card {
@@ -77,8 +85,6 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
             padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
         }
 
         .shop-grid {
@@ -86,15 +92,11 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
         }
 
-        /* Мобильная адаптация */
         @media (max-width: 600px) {
             .inventory-grid { grid-template-columns: repeat(2, 1fr); }
             .shop-grid { grid-template-columns: 1fr; }
-            .modal-content { width: 90%; margin: 20px auto; }
         }
 
         #power-level {
@@ -154,7 +156,7 @@
     <!-- Модальное окно инвентаря -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
-            <h2>🎒 Инвентарь (макс. 50) 
+            <h2>🎒 Инвентарь (макс. 50)
                 <select id="sort-select" onchange="sortInventory()">
                     <option value="rarity">По редкости</option>
                     <option value="power">По мощи</option>
@@ -168,7 +170,7 @@
     <!-- Модальное окно магазина -->
     <div id="shop-modal" class="modal">
         <div class="modal-content">
-            <h2>🏪 Магазин (10 предметов)
+            <h2>🏪 Магазин 
                 <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
             </h2>
             <div id="shop-items" class="shop-grid"></div>
@@ -205,12 +207,12 @@
             legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
         };
 
-        // Инициализация через Telegram initData
+        // Инициализация
         document.addEventListener('DOMContentLoaded', () => {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Получаем данные из initData
+            // Загружаем данные из бота
             const initData = Telegram.WebApp.initDataUnsafe;
             if (initData.user) {
                 currentUser = JSON.parse(initData.user);
@@ -218,6 +220,7 @@
                 currentUser = {
                     inventory: [],
                     equipped: { weapon: null, armor: null, helmet: null },
+                    shop: generateShopItems(10),
                     gold: 0,
                     level: 1,
                     exp: 0,
@@ -225,11 +228,13 @@
                 };
             }
 
-            // Генерируем магазин при каждом запуске
-            currentUser.shop = generateShopItems(10);
-            
             updateUI();
             calculatePower();
+
+            // Сохраняем данные при любом закрытии
+            window.addEventListener('beforeunload', () => {
+                Telegram.WebApp.sendData(JSON.stringify(currentUser));
+            });
         });
 
         // Поход в подземелье
@@ -243,11 +248,10 @@
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
             
-            // Ограничение инвентаря
             if (currentUser.inventory.length < 50) {
                 currentUser.inventory.push(rewards.item);
             } else {
-                alert("Инвентарь переполнен! Продайте ненужные предметы.");
+                alert("Инвентарь переполнен!");
             }
 
             checkLevelUp();
@@ -486,11 +490,21 @@
             setTimeout(() => popup.remove(), 3000);
         }
 
-        // Сохранение при закрытии
-        Telegram.WebApp.onEvent('mainButtonClicked', () => {
-            Telegram.WebApp.sendData(JSON.stringify(currentUser));
-            Telegram.WebApp.close();
-        });
+        // Переключение окон
+        function toggleInventory() {
+            const modal = document.getElementById('inventory-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleShop() {
+            const modal = document.getElementById('shop-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // Класс для стилизации редкости
+        function getRarityClass(rarity) {
+            return `rarity-${rarity}`;
+        }
     </script>
 </body>
 </html>
