@@ -202,13 +202,7 @@
     <script>
         let currentUser = {};
 
-        const rarityConfig = {
-            common: { color: '#808080', name: 'Обычный', multiplier: 1 },
-            magic: { color: '#007bff', name: 'Волшебный', multiplier: 1.5 },
-            rare: { color: '#1eff00', name: 'Редкий', multiplier: 2 },
-            epic: { color: '#ff00ff', name: 'Эпический', multiplier: 3 },
-            legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
-        };
+        const rarityConfig = { /* ваша конфигурация редкостей */ };
 
         // Инициализация через initData [[1]]
         document.addEventListener('DOMContentLoaded', () => {
@@ -232,9 +226,20 @@
 
             // Генерируем магазин (не сохраняется) [[9]]
             currentUser.shop = generateShopItems(10);
-            
             updateUI();
             calculatePower();
+            
+            // Автоматическое сохранение при закрытии [[2]]
+            window.addEventListener('beforeunload', () => {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    inventory: currentUser.inventory,
+                    equipped: currentUser.equipped,
+                    gold: currentUser.gold,
+                    level: currentUser.level,
+                    exp: currentUser.exp,
+                    stats: currentUser.stats
+                }));
+            });
         });
 
         // Поход в подземелье
@@ -257,24 +262,7 @@
             checkLevelUp();
             updateUI();
             showRewardPopup(rewards);
-            
-            // УБРАНО АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ [[2]]
         }
-
-        // Сохранение при закрытии через основную кнопку [[1]]
-        Telegram.WebApp.MainButton.setText("Сохранить и выйти")
-            .show()
-            .onClick(() => {
-                Telegram.WebApp.sendData(JSON.stringify({
-                    inventory: currentUser.inventory,
-                    equipped: currentUser.equipped,
-                    gold: currentUser.gold,
-                    level: currentUser.level,
-                    exp: currentUser.exp,
-                    stats: currentUser.stats
-                }));
-                Telegram.WebApp.close();
-            });
 
         // Генерация предмета
         function generateItem() {
@@ -505,6 +493,29 @@
             `;
             document.body.appendChild(popup);
             setTimeout(() => popup.remove(), 3000);
+        }
+
+        // Автоматическое сохранение при закрытии [[2]]
+        window.addEventListener('beforeunload', () => {
+            Telegram.WebApp.sendData(JSON.stringify({
+                inventory: currentUser.inventory,
+                equipped: currentUser.equipped,
+                gold: currentUser.gold,
+                level: currentUser.level,
+                exp: currentUser.exp,
+                stats: currentUser.stats
+            }));
+        });
+
+        // Переключение окон
+        function toggleInventory() {
+            const modal = document.getElementById('inventory-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleShop() {
+            const modal = document.getElementById('shop-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
         }
 
         // Класс для стилизации редкости
