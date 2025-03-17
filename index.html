@@ -79,7 +79,7 @@
     <script>
         let currentUser = {};
 
-        const rarityConfig = { /* ... */ };
+        const rarityConfig = { /* ваша конфигурация редкостей */ };
 
         // Инициализация через Telegram initData
         document.addEventListener('DOMContentLoaded', () => {
@@ -110,7 +110,7 @@
 
         // Поход в подземелье
         function exploreDungeon(difficulty) {
-            const rewards = { /* ... */ };
+            const rewards = { /* генерация наград */ };
 
             currentUser.exp += rewards.exp;
             currentUser.gold += rewards.gold;
@@ -124,12 +124,19 @@
             checkLevelUp();
             updateUI();
             showRewardPopup(rewards);
-            saveGame();  // ← СОХРАНЕНИЕ ПОСЛЕ КАЖДОГО ДЕЙСТВИЯ
+            saveGame();  // ← Сохраняем после каждого действия
         }
 
         // Сохранение данных
         function saveGame() {
-            Telegram.WebApp.sendData(JSON.stringify(currentUser));
+            Telegram.WebApp.sendData(JSON.stringify({
+                inventory: currentUser.inventory,
+                equipped: currentUser.equipped,
+                gold: currentUser.gold,
+                level: currentUser.level,
+                exp: currentUser.exp,
+                stats: currentUser.stats
+            }));
         }
 
         // Остальной код без изменений
