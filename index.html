@@ -173,7 +173,15 @@
     </div>
 
     <script>
-        let currentUser = {};
+        let currentUser = {
+            inventory: [],
+            equipped: { weapon: null, armor: null, helmet: null },
+            shop: [],
+            gold: 0,
+            level: 1,
+            exp: 0,
+            stats: { hp: 100, damage: 10 }
+        };
 
         const rarityConfig = {
             common: { color: '#808080', name: 'Обычный', multiplier: 1 },
@@ -194,11 +202,8 @@
             // Обрабатываем ответ от бота
             Telegram.WebApp.onEvent('web_app_data', (data) => {
                 const parsedData = JSON.parse(data.data);
-                currentUser = { ...parsedData };
-                if (!currentUser.inventory) {
-                    currentUser.inventory = [];
-                }
-                if (!currentUser.shop) {
+                currentUser = { ...currentUser, ...parsedData };
+                if (!currentUser.shop.length) {
                     currentUser.shop = generateShopItems(10);
                 }
                 updateUI();
