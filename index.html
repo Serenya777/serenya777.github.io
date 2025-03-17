@@ -108,6 +108,7 @@
                         exp: 0,
                         stats: { hp: 100, damage: 10 }
                     };
+                    currentUser.shop = generateShopItems(10);  // ← ГЕНЕРИРУЕМ МАГАЗИН
                     updateUI();
                     calculatePower();
                 });
@@ -133,7 +134,7 @@
             checkLevelUp();
             updateUI();
             showRewardPopup(rewards);
-            saveGame();  // ← Сохраняем после каждого действия
+            saveGame();  // ← СОХРАНЕНИЕ ПОСЛЕ КАЖДОГО ДЕЙСТВИЯ
         }
 
         // Генерация предмета
@@ -147,6 +148,24 @@
                 stats: { [type.stat]: Math.floor(15 + Math.random() * 25) * rarityConfig[rarity].multiplier },
                 rarity: rarity
             };
+        }
+
+        // Генерация магазина
+        function generateShopItems(count) {
+            const items = [];
+            for(let i = 0; i < count; i++) {
+                const rarity = getRandomRarity();
+                const type = getRandomItemType();
+
+                items.push({
+                    name: `${rarityConfig[rarity].name} ${type.name}`,
+                    type: type.type,
+                    price: Math.floor(50 + Math.random() * 100) * rarityConfig[rarity].multiplier,
+                    stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
+                    rarity: rarity
+                });
+            }
+            return items;
         }
 
         // Вспомогательные функции
@@ -261,7 +280,7 @@
             currentUser.inventory.splice(index, 1);
             
             updateUI();
-            saveGame();  // ← Сохраняем после экипировки
+            saveGame();  // ← СОХРАНЕНИЕ
         }
 
         // Продажа предмета
@@ -271,7 +290,7 @@
             currentUser.inventory.splice(index, 1);
             
             updateUI();
-            saveGame();  // ← Сохраняем после продажи
+            saveGame();  // ← СОХРАНЕНИЕ
         }
 
         // Цена предмета
@@ -290,7 +309,7 @@
                 currentUser.inventory.push(item);
                 currentUser.shop[index] = generateShopItem();
                 updateUI();
-                saveGame();  // ← Сохраняем после покупки
+                saveGame();  // ← СОХРАНЕНИЕ
             } else if (currentUser.inventory.length >= 50) {
                 alert("Инвентарь переполнен!");
             } else {
@@ -333,7 +352,7 @@
                 }
             });
             updateInventory();
-            saveGame();  // ← Сохраняем после сортировки
+            saveGame();  // ← СОХРАНЕНИЕ
         }
 
         // Всплывающее окно наград
@@ -355,7 +374,14 @@
 
         // Сохранение данных
         function saveGame() {
-            Telegram.WebApp.sendData(JSON.stringify(currentUser));
+            Telegram.WebApp.sendData(JSON.stringify({
+                inventory: currentUser.inventory,
+                equipped: currentUser.equipped,
+                gold: currentUser.gold,
+                level: currentUser.level,
+                exp: currentUser.exp,
+                stats: currentUser.stats
+            }));
         }
 
         // Переключение окон
