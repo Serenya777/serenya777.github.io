@@ -7,7 +7,126 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Ваши стили остаются без изменений */
+        body {
+            background: linear-gradient(135deg, #1a1a1a, #2c3e50);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+        }
+
+        .dungeon-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            width: 100%;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: rgba(255,255,255,0.1);
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            width: calc(100% - 40px);
+            max-width: 600px;
+        }
+
+        .item-card {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .item-card:hover {
+            transform: scale(1.02);
+        }
+
+        .rarity-common { border-color: #808080; }
+        .rarity-magic { border-color: #007bff; }
+        .rarity-rare { border-color: #1eff00; }
+        .rarity-epic { border-color: #ff00ff; }
+        .rarity-legendary { border-color: #ffd700; }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 600px) {
+            .inventory-grid { grid-template-columns: repeat(2, 1fr); }
+            .shop-grid { grid-template-columns: 1fr; }
+            .modal-content { width: 90%; margin: 10px auto; }
+        }
+
+        #power-level {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2em;
+        }
+
+        .reward-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
@@ -83,14 +202,19 @@
     <script>
         let currentUser = {};
 
-        const rarityConfig = { /* ваша конфигурация редкостей */ };
+        const rarityConfig = {
+            common: { color: '#808080', name: 'Обычный', multiplier: 1 },
+            magic: { color: '#007bff', name: 'Волшебный', multiplier: 1.5 },
+            rare: { color: '#1eff00', name: 'Редкий', multiplier: 2 },
+            epic: { color: '#ff00ff', name: 'Эпический', multiplier: 3 },
+            legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
+        };
 
-        // Инициализация через initData [[1]]
         document.addEventListener('DOMContentLoaded', () => {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Получаем данные из initData [[1]]
+            // Загрузка данных из initData
             const initData = Telegram.WebApp.initDataUnsafe;
             if (initData && initData.data) {
                 currentUser = JSON.parse(initData.data);
@@ -105,13 +229,11 @@
                 };
             }
 
-            // Генерируем магазин
             currentUser.shop = generateShopItems(10);
             updateUI();
             calculatePower();
         });
 
-        // Поход в подземелье
         function exploreDungeon(difficulty) {
             const rewards = {
                 exp: 50 * difficulty,
@@ -133,7 +255,6 @@
             showRewardPopup(rewards);
         }
 
-        // Генерация предмета
         function generateItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
@@ -146,7 +267,6 @@
             };
         }
 
-        // Генерация магазина
         function generateShopItems(count) {
             const items = [];
             for(let i = 0; i < count; i++) {
@@ -164,7 +284,6 @@
             return items;
         }
 
-        // Вспомогательные функции
         function getRandomRarity() {
             const rarities = Object.keys(rarityConfig);
             return rarities[Math.floor(Math.random() * rarities.length)];
@@ -179,7 +298,6 @@
             return types[Math.floor(Math.random() * types.length)];
         }
 
-        // Проверка уровня
         function checkLevelUp() {
             const needed = 100 * (2 ** (currentUser.level - 1));
             if (currentUser.exp >= needed) {
@@ -191,14 +309,12 @@
             }
         }
 
-        // Обновление интерфейса
         function updateUI() {
             document.getElementById('level').textContent = currentUser.level;
             document.getElementById('gold').textContent = currentUser.gold;
             document.getElementById('exp').textContent = currentUser.exp;
             document.getElementById('exp-needed').textContent = 100 * (2 ** (currentUser.level - 1));
 
-            // Обновление экипировки
             document.getElementById('equipped-weapon').innerHTML = 
                 currentUser.equipped.weapon ? `
                     <i class="fas fa-sword"></i> ${currentUser.equipped.weapon.name}
@@ -221,7 +337,6 @@
             updateShop();
         }
 
-        // Отображение инвентаря
         function updateInventory() {
             const container = document.getElementById('inventory-items');
             container.innerHTML = currentUser.inventory.map((item, index) => `
@@ -245,7 +360,6 @@
             `).join('');
         }
 
-        // Отображение магазина
         function updateShop() {
             const container = document.getElementById('shop-items');
             container.innerHTML = currentUser.shop.map((item, index) => `
@@ -266,7 +380,6 @@
             `).join('');
         }
 
-        // Надевание предмета
         function equipItem(index) {
             const item = currentUser.inventory[index];
             if (currentUser.equipped[item.type]) {
@@ -278,7 +391,6 @@
             updateUI();
         }
 
-        // Продажа предмета
         function sellItem(index) {
             const item = currentUser.inventory[index];
             currentUser.gold += getItemPrice(item);
@@ -287,7 +399,6 @@
             updateUI();
         }
 
-        // Цена предмета
         function getItemPrice(item) {
             return Math.round(
                 Object.values(item.stats)[0] * 
@@ -295,7 +406,6 @@
             );
         }
 
-        // Покупка предмета
         function buyItem(index) {
             const item = currentUser.shop[index];
             if (currentUser.gold >= item.price && currentUser.inventory.length < 50) {
@@ -310,7 +420,6 @@
             }
         }
 
-        // Генерация предмета для магазина
         function generateShopItem() {
             const rarity = getRandomRarity();
             const type = getRandomItemType();
@@ -324,7 +433,6 @@
             };
         }
 
-        // Расчёт мощи
         function calculatePower() {
             let power = 0;
             Object.values(currentUser.equipped).forEach(item => {
@@ -333,7 +441,6 @@
             document.getElementById('power-value').textContent = power;
         }
 
-        // Сортировка инвентаря
         function sortInventory() {
             const type = document.getElementById('sort-select').value;
             currentUser.inventory.sort((a, b) => {
@@ -347,7 +454,6 @@
             updateInventory();
         }
 
-        // Всплывающее окно наград
         function showRewardPopup(rewards) {
             const popup = document.createElement('div');
             popup.className = 'reward-popup';
@@ -364,7 +470,7 @@
             setTimeout(() => popup.remove(), 3000);
         }
 
-        // Автоматическое сохранение при закрытии [[2]]
+        // Автоматическое сохранение при закрытии
         window.addEventListener('beforeunload', () => {
             Telegram.WebApp.sendData(JSON.stringify({
                 inventory: currentUser.inventory,
@@ -376,7 +482,6 @@
             }));
         });
 
-        // Переключение окон
         function toggleInventory() {
             const modal = document.getElementById('inventory-modal');
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
@@ -387,7 +492,6 @@
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
         }
 
-        // Класс для стилизации редкости
         function getRarityClass(rarity) {
             return `rarity-${rarity}`;
         }
