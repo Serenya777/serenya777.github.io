@@ -171,7 +171,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно магазина -->
     <div id="shop-modal" class="modal">
         <div class="modal-content">
             <h2>🏪 Магазин 
@@ -211,15 +210,17 @@
             legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
         };
 
-        // Инициализация через Telegram initData
+        // Инициализация через URL-параметры
         document.addEventListener('DOMContentLoaded', () => {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Получаем данные из initData
-            const initData = Telegram.WebApp.initDataUnsafe;
-            if (initData && initData.data) {
-                currentUser = JSON.parse(initData.data);
+            // Получаем данные из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('data');
+            
+            if (dataParam) {
+                currentUser = JSON.parse(decodeURIComponent(dataParam));
             } else {
                 currentUser = {
                     inventory: [],
@@ -231,7 +232,7 @@
                 };
             }
 
-            // Генерируем магазин при каждом запуске
+            // Генерируем магазин
             currentUser.shop = generateShopItems(10);
             
             updateUI();
@@ -258,7 +259,7 @@
             checkLevelUp();
             updateUI();
             showRewardPopup(rewards);
-            saveGame();  // Сохранение после каждого действия
+            saveGame();  // Сохранение без закрытия
         }
 
         // Генерация предмета
@@ -404,7 +405,7 @@
             currentUser.inventory.splice(index, 1);
             
             updateUI();
-            saveGame();  // Сохранение после экипировки
+            saveGame();
         }
 
         // Продажа предмета
@@ -414,7 +415,7 @@
             currentUser.inventory.splice(index, 1);
             
             updateUI();
-            saveGame();  // Сохранение после продажи
+            saveGame();
         }
 
         // Цена предмета
@@ -433,7 +434,7 @@
                 currentUser.inventory.push(item);
                 currentUser.shop[index] = generateShopItem();
                 updateUI();
-                saveGame();  // Сохранение после покупки
+                saveGame();
             } else if (currentUser.inventory.length >= 50) {
                 alert("Инвентарь переполнен!");
             } else {
@@ -476,7 +477,7 @@
                 }
             });
             updateInventory();
-            saveGame();  // Сохранение после сортировки
+            saveGame();
         }
 
         // Всплывающее окно наград
