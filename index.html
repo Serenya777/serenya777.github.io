@@ -195,6 +195,9 @@
             Telegram.WebApp.onEvent('web_app_data', (data) => {
                 const parsedData = JSON.parse(data.data);
                 currentUser = { ...parsedData };
+                if (!currentUser.inventory) {
+                    currentUser.inventory = [];
+                }
                 if (!currentUser.shop) {
                     currentUser.shop = generateShopItems(10);
                 }
