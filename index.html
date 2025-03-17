@@ -160,7 +160,7 @@
     <!-- Модальное окно инвентаря -->
     <div id="inventory-modal" class="modal">
         <div class="modal-content">
-            <h2>🎒 Инвентарь (макс. 50) 
+            <h2>🎒 Инвентарь (макс. 50)
                 <select id="sort-select" onchange="sortInventory()">
                     <option value="rarity">По редкости</option>
                     <option value="power">По мощи</option>
@@ -171,6 +171,7 @@
         </div>
     </div>
 
+    <!-- Модальное окно магазина -->
     <div id="shop-modal" class="modal">
         <div class="modal-content">
             <h2>🏪 Магазин 
@@ -210,17 +211,15 @@
             legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
         };
 
-        // Инициализация через URL-параметры
+        // Инициализация через initData
         document.addEventListener('DOMContentLoaded', () => {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
 
-            // Получаем данные из URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const dataParam = urlParams.get('data');
-            
-            if (dataParam) {
-                currentUser = JSON.parse(decodeURIComponent(dataParam));
+            // Получаем данные из initData
+            const initData = Telegram.WebApp.initDataUnsafe;
+            if (initData && initData.data) {
+                currentUser = JSON.parse(initData.data);
             } else {
                 currentUser = {
                     inventory: [],
@@ -234,7 +233,6 @@
 
             // Генерируем магазин
             currentUser.shop = generateShopItems(10);
-            
             updateUI();
             calculatePower();
         });
