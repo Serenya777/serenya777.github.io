@@ -1,500 +1,315 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Quest</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>РПГ-Подземелья</title>
     <style>
-        body {
-            background: linear-gradient(135deg, #1a1a1a, #2c3e50);
-            min-height: 100vh;
-            color: white;
-            font-family: 'Arial', sans-serif;
-            padding: 20px;
-            margin: 0;
+        body { background: #1a1a2e; color: white; font-family: Arial, sans-serif; }
+        .game-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        #gameCanvas { border: 3px solid #444; background: #0f0f23; }
+        .ui-panel { background: rgba(0, 0, 0, 0.7); padding: 15px; margin-top: 10px; border-radius: 8px; }
+        button { 
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border: none; color: white; padding: 12px 20px; margin: 5px;
+            border-radius: 5px; cursor: pointer; font-size: 16px;
         }
-
-        #status-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            display: flex;
-            justify-content: space-around;
-            z-index: 1000;
+        button:hover { opacity: 0.9; }
+        .inventory-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; }
+        .inventory-slot { 
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #444; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            height: 80px;
         }
-
-        .dungeon-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            border: none;
-            padding: 15px;
-            border-radius: 12px;
-            width: 100%;
-            cursor: pointer;
-            margin: 10px 0;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.9);
-            justify-content: center;
-            align-items: flex-start;
-            overflow-y: auto;
-        }
-
-        .modal-content {
-            background: rgba(255,255,255,0.1);
-            margin: 20px;
-            padding: 20px;
-            border-radius: 12px;
-            width: calc(100% - 40px);
-            max-width: 600px;
-        }
-
-        .item-card {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px;
-            border: 2px solid transparent;
-            transition: transform 0.2s;
-        }
-
-        .item-card:hover {
-            transform: scale(1.02);
-        }
-
-        .rarity-common { border-color: #808080; }
-        .rarity-magic { border-color: #007bff; }
-        .rarity-rare { border-color: #1eff00; }
-        .rarity-epic { border-color: #ff00ff; }
-        .rarity-legendary { border-color: #ffd700; }
-
-        .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        .shop-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            padding: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        @media (max-width: 600px) {
-            .inventory-grid { grid-template-columns: repeat(2, 1fr); }
-            .shop-grid { grid-template-columns: 1fr; }
-            .modal-content { width: 90%; margin: 10px auto; }
-        }
-
-        #power-level {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.2em;
-        }
-
-        .reward-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            padding: 15px;
-            border-radius: 10px;
-            animation: slideIn 0.5s;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-        }
+        .item-icon { max-width: 60%; max-height: 60%; }
     </style>
 </head>
 <body>
-    <!-- Верхняя панель -->
-    <div id="status-bar">
-        <div><i class="fas fa-level-up-alt"></i> Уровень <span id="level">1</span></div>
-        <div><i class="fas fa-coins"></i> Золото <span id="gold">0</span></div>
-        <div><i class="fas fa-bolt"></i> Опыт <span id="exp">0</span>/<span id="exp-needed">100</span></div>
-    </div>
-
-    <!-- Подземелья -->
-    <div class="dungeons-container">
-        <button class="dungeon-btn" onclick="exploreDungeon(1)">
-            <i class="fas fa-dungeon"></i> Подземелье 1
-        </button>
-        <button class="dungeon-btn" onclick="exploreDungeon(2)">
-            <i class="fas fa-skull"></i> Подземелье 2
-        </button>
-    </div>
-
-    <!-- Кнопки управления -->
-    <div style="margin-top: 200px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="toggleInventory()" class="dungeon-btn">
-            <i class="fas fa-sack"></i> Инвентарь
-        </button>
-        <button onclick="toggleShop()" class="dungeon-btn">
-            <i class="fas fa-store"></i> Магазин
-        </button>
-    </div>
-
-    <!-- Модальные окна -->
-    <div id="inventory-modal" class="modal">
-        <div class="modal-content">
-            <h2>🎒 Инвентарь (макс. 50)
-                <select id="sort-select" onchange="sortInventory()">
-                    <option value="rarity">По редкости</option>
-                    <option value="power">По мощи</option>
-                </select>
-                <button onclick="toggleInventory()" class="dungeon-btn">Закрыть</button>
-            </h2>
-            <div id="inventory-items" class="inventory-grid"></div>
+    <div class="game-container">
+        <h1>РПГ-Подземелья</h1>
+        <canvas id="gameCanvas" width="700" height="400"></canvas>
+        
+        <div class="ui-panel">
+            <div>Уровень: <span id="level">1</span></div>
+            <div>Опыт: <span id="exp">0</span>/<span id="expToNext">100</span></div>
+            <div>Золото: <span id="gold">0</span></div>
         </div>
-    </div>
-
-    <div id="shop-modal" class="modal">
-        <div class="modal-content">
-            <h2>🏪 Магазин 
-                <button onclick="toggleShop()" class="dungeon-btn">Закрыть</button>
-            </h2>
-            <div id="shop-items" class="shop-grid"></div>
+        
+        <div>
+            <button onclick="goToDungeon()">В подземелье</button>
+            <button onclick="openInventory()">Инвентарь</button>
+            <button onclick="openShop()">Магазин</button>
         </div>
-    </div>
-
-    <!-- Экипировка -->
-    <div id="equipment" style="margin-top: 250px;">
-        <h3>🛡️ Экипировка</h3>
-        <div class="item-card" id="equipped-weapon">
-            <i class="fas fa-sword"></i> Оружие: -
-        </div>
-        <div class="item-card" id="equipped-armor">
-            <i class="fas fa-shield-alt"></i> Броня: -
-        </div>
-        <div class="item-card" id="equipped-helmet">
-            <i class="fas fa-helmet-safety"></i> Шлем: -
-        </div>
-    </div>
-
-    <!-- Мощь игрока -->
-    <div id="power-level">
-        ⚡ Мощь: <span id="power-value">0</span>
     </div>
 
     <script>
-        let currentUser = {};
-
-        const rarityConfig = {
-            common: { color: '#808080', name: 'Обычный', multiplier: 1 },
-            magic: { color: '#007bff', name: 'Волшебный', multiplier: 1.5 },
-            rare: { color: '#1eff00', name: 'Редкий', multiplier: 2 },
-            epic: { color: '#ff00ff', name: 'Эпический', multiplier: 3 },
-            legendary: { color: '#ffd700', name: 'Легендарный', multiplier: 5 }
+        let player = {
+            x: 350, y: 200,
+            level: 1,
+            exp: 0,
+            gold: 0,
+            equipped: {
+                weapon: null,
+                armor: null,
+                amulet: null,
+                ring: null
+            },
+            inventory: []
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let user_id = 'default_user'; // В реальном приложении получите это из Telegram
 
-            // Загрузка данных из initData
-            const initData = Telegram.WebApp.initDataUnsafe;
-            if (initData && initData.data) {
-                currentUser = JSON.parse(initData.data);
-            } else {
-                currentUser = {
-                    inventory: [],
-                    equipped: { weapon: null, armor: null, helmet: null },
-                    gold: 0,
-                    level: 1,
-                    exp: 0,
-                    stats: { hp: 100, damage: 10 }
-                };
-            }
-
-            currentUser.shop = generateShopItems(10);
-            updateUI();
-            calculatePower();
-        });
-
-        function exploreDungeon(difficulty) {
-            const rewards = {
-                exp: 50 * difficulty,
-                gold: 30 * difficulty,
-                item: generateItem()
-            };
-
-            currentUser.exp += rewards.exp;
-            currentUser.gold += rewards.gold;
-            
-            if (currentUser.inventory.length < 50) {
-                currentUser.inventory.push(rewards.item);
-            } else {
-                alert("Инвентарь переполнен!");
-            }
-
-            checkLevelUp();
-            updateUI();
-            showRewardPopup(rewards);
+        async function initGame() {
+            await loadPlayerData();
+            drawGame();
         }
 
-        function generateItem() {
-            const rarity = getRandomRarity();
-            const type = getRandomItemType();
-
-            return {
-                name: `${rarityConfig[rarity].name} ${type.name}`,
-                type: type.type,
-                stats: { [type.stat]: Math.floor(15 + Math.random() * 25) * rarityConfig[rarity].multiplier },
-                rarity: rarity
-            };
+        async function loadPlayerData() {
+            try {
+                const response = await fetch(`/player/${user_id}`);
+                player = await response.json();
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+            }
         }
 
-        function generateShopItems(count) {
-            const items = [];
-            for(let i = 0; i < count; i++) {
-                const rarity = getRandomRarity();
-                const type = getRandomItemType();
-
-                items.push({
-                    name: `${rarityConfig[rarity].name} ${type.name}`,
-                    type: type.type,
-                    price: Math.floor(50 + Math.random() * 100) * rarityConfig[rarity].multiplier,
-                    stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
-                    rarity: rarity
+        async function savePlayerData() {
+            try {
+                await fetch(`/player/${user_id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(player)
                 });
+            } catch (error) {
+                console.error('Ошибка сохранения данных:', error);
             }
-            return items;
         }
 
-        function getRandomRarity() {
-            const rarities = Object.keys(rarityConfig);
-            return rarities[Math.floor(Math.random() * rarities.length)];
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawDungeonBackground();
+            drawPlayer();
+            
+            document.getElementById('level').textContent = player.level;
+            document.getElementById('exp').textContent = player.exp;
+            document.getElementById('expToNext').textContent = player.level * 100;
+            document.getElementById('gold').textContent = player.gold;
         }
 
-        function getRandomItemType() {
-            const types = [
-                { name: 'Меч', type: 'weapon', stat: 'damage' },
-                { name: 'Щит', type: 'armor', stat: 'defense' },
-                { name: 'Шлем', type: 'helmet', stat: 'hp' }
+        function drawDungeonBackground() {
+            ctx.fillStyle = '#0f0f23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = player.equipped.armor ? '#44f' : '#0f0';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (player.equipped.weapon) {
+                ctx.fillStyle = '#f44';
+                ctx.fillRect(player.x - 2, player.y - 20, 4, 20);
+            }
+        }
+
+        function goToDungeon() {
+            const dungeonLevel = Math.floor(Math.random() * 3) + 1;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Загрузка подземелья уровня ${dungeonLevel}...`, 200, 200);
+            
+            setTimeout(async () => {
+                const goldReward = Math.floor(Math.random() * 50) + 10;
+                const expReward = Math.floor(Math.random() * 20) + 5;
+                player.gold += goldReward;
+                player.exp += expReward;
+                
+                if (player.exp >= player.level * 100) {
+                    player.level += 1;
+                    player.exp = 0;
+                }
+                
+                generateLoot();
+                await savePlayerData();
+                drawGame();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px Arial';
+                ctx.fillText(`Вы победили в подземелье!`, 230, 150);
+                ctx.fillText(`+${goldReward} золота, +${expReward} опыта`, 230, 180);
+                ctx.fillText('Нажмите для продолжения', 200, 210);
+                
+                setTimeout(drawGame, 3000);
+            }, 2000);
+        }
+
+        function generateLoot() {
+            const rarities = ['обычный', 'редкий', 'волшебный', 'эпический', 'легендарный'];
+            const itemTypes = ['weapon', 'armor', 'amulet', 'ring'];
+            
+            const newItem = {
+                name: `${rarities[Math.floor(Math.random() * rarities.length)]} ${itemTypes[Math.floor(Math.random() * itemTypes.length)]}`,
+                type: itemTypes[Math.floor(Math.random() * itemTypes.length)],
+                rarity: rarities[Math.floor(Math.random() * rarities.length)],
+                effects: {}
+            };
+            
+            if (newItem.type === 'weapon') {
+                newItem.effects.physicalAttack = Math.floor(Math.random() * 10) + 1;
+                newItem.effects.magicAttack = Math.floor(Math.random() * 10) + 1;
+            } else if (newItem.type === 'armor') {
+                newItem.effects.physicalDefense = Math.floor(Math.random() * 10) + 1;
+                newItem.effects.magicDefense = Math.floor(Math.random() * 10) + 1;
+            }
+            
+            const possibleEffects = [
+                'attackBonus', 'defenseBonus', 'expBonus', 
+                'goldBonus', 'lootRarityBonus', 'healthRegen'
             ];
-            return types[Math.floor(Math.random() * types.length)];
-        }
-
-        function checkLevelUp() {
-            const needed = 100 * (2 ** (currentUser.level - 1));
-            if (currentUser.exp >= needed) {
-                currentUser.level++;
-                currentUser.exp -= needed;
-                currentUser.stats.hp += 20;
-                currentUser.stats.damage += 5;
-                alert(`Поздравляем! Вы достигли уровня ${currentUser.level}`);
+            
+            const additionalEffects = Math.floor(Math.random() * 3) + 1;
+            for (let i = 0; i < additionalEffects; i++) {
+                const effect = possibleEffects[Math.floor(Math.random() * possibleEffects.length)];
+                newItem.effects[effect] = Math.floor(Math.random() * 5) + 1;
             }
+            
+            player.inventory.push(newItem);
         }
 
-        function updateUI() {
-            document.getElementById('level').textContent = currentUser.level;
-            document.getElementById('gold').textContent = currentUser.gold;
-            document.getElementById('exp').textContent = currentUser.exp;
-            document.getElementById('exp-needed').textContent = 100 * (2 ** (currentUser.level - 1));
-
-            document.getElementById('equipped-weapon').innerHTML = 
-                currentUser.equipped.weapon ? `
-                    <i class="fas fa-sword"></i> ${currentUser.equipped.weapon.name}
-                    <div>⚔️ +${currentUser.equipped.weapon.stats.damage}</div>
-                ` : '<i class="fas fa-sword"></i> Оружие: -';
+        function openInventory() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.fillText('Инвентарь', 320, 30);
+            
+            const inventoryGrid = document.createElement('div');
+            inventoryGrid.className = 'inventory-grid';
+            document.body.appendChild(inventoryGrid);
+            
+            player.inventory.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
                 
-            document.getElementById('equipped-armor').innerHTML = 
-                currentUser.equipped.armor ? `
-                    <i class="fas fa-shield-alt"></i> ${currentUser.equipped.armor.name}
-                    <div>🛡️ +${currentUser.equipped.armor.stats.defense}</div>
-                ` : '<i class="fas fa-shield-alt"></i> Броня: -';
+                const icon = document.createElement('div');
+                icon.className = 'item-icon';
+                icon.style.backgroundColor = getItemColor(item.rarity);
+                icon.title = getItemDescription(item);
+                slot.appendChild(icon);
                 
-            document.getElementById('equipped-helmet').innerHTML = 
-                currentUser.equipped.helmet ? `
-                    <i class="fas fa-helmet-safety"></i> ${currentUser.equipped.helmet.name}
-                    <div>❤️ +${currentUser.equipped.helmet.stats.hp}</div>
-                ` : '<i class="fas fa-helmet-safety"></i> Шлем: -';
-            
-            updateInventory();
-            updateShop();
+                slot.addEventListener('click', () => equipItem(item));
+                inventoryGrid.appendChild(slot);
+            });
         }
 
-        function updateInventory() {
-            const container = document.getElementById('inventory-items');
-            container.innerHTML = currentUser.inventory.map((item, index) => `
-                <div class="item-card ${getRarityClass(item.rarity)}">
-                    <div class="item-header">
-                        <span>${item.name}</span>
-                        <span style="color: ${rarityConfig[item.rarity].color}">
-                            ${rarityConfig[item.rarity].name}
-                        </span>
-                    </div>
-                    <div class="item-stats">
-                        ${Object.entries(item.stats).map(([k, v]) => `
-                            <div>${k === 'damage' ? '⚔️' : k === 'defense' ? '🛡️' : '❤️'}${v}</div>
-                        `).join('')}
-                    </div>
-                    <div class="item-actions">
-                        <button onclick="equipItem(${index})">Надеть</button>
-                        <button onclick="sellItem(${index})">Продать за ${getItemPrice(item)}</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function updateShop() {
-            const container = document.getElementById('shop-items');
-            container.innerHTML = currentUser.shop.map((item, index) => `
-                <div class="item-card ${getRarityClass(item.rarity)}">
-                    <div class="item-header">
-                        <span>${item.name}</span>
-                        <span style="color: ${rarityConfig[item.rarity].color}">
-                            ${rarityConfig[item.rarity].name}
-                        </span>
-                    </div>
-                    <div class="item-stats">
-                        ${Object.entries(item.stats).map(([k, v]) => `
-                            <div>${k === 'damage' ? '⚔️' : k === 'defense' ? '🛡️' : '❤️'}${v}</div>
-                        `).join('')}
-                    </div>
-                    <button onclick="buyItem(${index})">Купить за ${item.price}</button>
-                </div>
-            `).join('');
-        }
-
-        function equipItem(index) {
-            const item = currentUser.inventory[index];
-            if (currentUser.equipped[item.type]) {
-                currentUser.inventory.push(currentUser.equipped[item.type]);
+        function getItemColor(rarity) {
+            switch(rarity) {
+                case 'легендарный': return '#d4af37';
+                case 'эпический': return '#5e5eff';
+                case 'волшебный': return '#a37cff';
+                case 'редкий': return '#25c525';
+                default: return '#ffffff';
             }
-            currentUser.equipped[item.type] = item;
-            currentUser.inventory.splice(index, 1);
-            
-            updateUI();
         }
 
-        function sellItem(index) {
-            const item = currentUser.inventory[index];
-            currentUser.gold += getItemPrice(item);
-            currentUser.inventory.splice(index, 1);
-            
-            updateUI();
-        }
-
-        function getItemPrice(item) {
-            return Math.round(
-                Object.values(item.stats)[0] * 
-                rarityConfig[item.rarity].multiplier * 0.8
-            );
-        }
-
-        function buyItem(index) {
-            const item = currentUser.shop[index];
-            if (currentUser.gold >= item.price && currentUser.inventory.length < 50) {
-                currentUser.gold -= item.price;
-                currentUser.inventory.push(item);
-                currentUser.shop[index] = generateShopItem();
-                updateUI();
-            } else if (currentUser.inventory.length >= 50) {
-                alert("Инвентарь переполнен!");
-            } else {
-                alert("Недостаточно золота!");
+        function getItemDescription(item) {
+            let desc = `${item.name}\n`;
+            for (const [key, value] of Object.entries(item.effects)) {
+                desc += `- ${key}: +${value}\n`;
             }
+            return desc;
+        }
+
+        function equipItem(item) {
+            if (player.equipped[item.type]) {
+                player.inventory.push(player.equipped[item.type]);
+            }
+            player.equipped[item.type] = item;
+            player.inventory = player.inventory.filter(i => i !== item);
+            savePlayerData();
+            drawGame();
+        }
+
+        function openShop() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.fillText('Магазин', 320, 30);
+            
+            const shopGrid = document.createElement('div');
+            shopGrid.className = 'inventory-grid';
+            document.body.appendChild(shopGrid);
+            
+            const itemsForSale = Array.from({length: 5}, () => generateShopItem());
+            
+            itemsForSale.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
+                
+                const icon = document.createElement('div');
+                icon.className = 'item-icon';
+                icon.style.backgroundColor = getItemColor(item.rarity);
+                icon.title = `Цена: ${item.cost} золота\n${getItemDescription(item)}`;
+                slot.appendChild(icon);
+                
+                slot.addEventListener('click', () => buyItem(item));
+                shopGrid.appendChild(slot);
+            });
         }
 
         function generateShopItem() {
-            const rarity = getRandomRarity();
-            const type = getRandomItemType();
+            const rarities = ['обычный', 'редкий', 'волшебный', 'эпический', 'легендарный'];
+            const itemTypes = ['weapon', 'armor', 'amulet', 'ring'];
             
-            return {
-                name: `${rarityConfig[rarity].name} ${type.name}`,
-                type: type.type,
-                price: Math.floor(50 + Math.random() * 100) * rarityConfig[rarity].multiplier,
-                stats: { [type.stat]: Math.floor(10 + Math.random() * 20) * rarityConfig[rarity].multiplier },
-                rarity: rarity
+            const newItem = {
+                name: `${rarities[Math.floor(Math.random() * rarities.length)]} ${itemTypes[Math.floor(Math.random() * itemTypes.length)]}`,
+                type: itemTypes[Math.floor(Math.random() * itemTypes.length)],
+                rarity: rarities[Math.floor(Math.random() * rarities.length)],
+                cost: Math.floor(Math.random() * 100) + 10,
+                effects: {}
             };
+            
+            if (newItem.type === 'weapon') {
+                newItem.effects.physicalAttack = Math.floor(Math.random() * 5) + 1;
+                newItem.effects.magicAttack = Math.floor(Math.random() * 5) + 1;
+            } else if (newItem.type === 'armor') {
+                newItem.effects.physicalDefense = Math.floor(Math.random() * 5) + 1;
+                newItem.effects.magicDefense = Math.floor(Math.random() * 5) + 1;
+            }
+            
+            const possibleEffects = [
+                'attackBonus', 'defenseBonus', 'expBonus', 
+                'goldBonus', 'lootRarityBonus', 'healthRegen'
+            ];
+            
+            const additionalEffects = Math.floor(Math.random() * 3);
+            for (let i = 0; i < additionalEffects; i++) {
+                const effect = possibleEffects[Math.floor(Math.random() * possibleEffects.length)];
+                newItem.effects[effect] = Math.floor(Math.random() * 3) + 1;
+            }
+            
+            return newItem;
         }
 
-        function calculatePower() {
-            let power = 0;
-            Object.values(currentUser.equipped).forEach(item => {
-                if (item) power += Object.values(item.stats)[0];
-            });
-            document.getElementById('power-value').textContent = power;
+        function buyItem(item) {
+            if (player.gold >= item.cost) {
+                player.gold -= item.cost;
+                player.inventory.push(item);
+                savePlayerData();
+            }
+            drawGame();
         }
 
-        function sortInventory() {
-            const type = document.getElementById('sort-select').value;
-            currentUser.inventory.sort((a, b) => {
-                if (type === 'rarity') {
-                    return Object.keys(rarityConfig).indexOf(b.rarity) - 
-                           Object.keys(rarityConfig).indexOf(a.rarity);
-                } else {
-                    return Object.values(b.stats)[0] - Object.values(a.stats)[0];
-                }
-            });
-            updateInventory();
-        }
-
-        function showRewardPopup(rewards) {
-            const popup = document.createElement('div');
-            popup.className = 'reward-popup';
-            popup.innerHTML = `
-                <div class="popup-content">
-                    <i class="fas fa-trophy"></i>
-                    <div>Получено:</div>
-                    <div>Опыт: +${rewards.exp}</div>
-                    <div>Золото: +${rewards.gold}</div>
-                    <div>Предмет: ${rewards.item.name}</div>
-                </div>
-            `;
-            document.body.appendChild(popup);
-            setTimeout(() => popup.remove(), 3000);
-        }
-
-        // Автоматическое сохранение при закрытии
-        window.addEventListener('beforeunload', () => {
-            Telegram.WebApp.sendData(JSON.stringify({
-                inventory: currentUser.inventory,
-                equipped: currentUser.equipped,
-                gold: currentUser.gold,
-                level: currentUser.level,
-                exp: currentUser.exp,
-                stats: currentUser.stats
-            }));
-        });
-
-        function toggleInventory() {
-            const modal = document.getElementById('inventory-modal');
-            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        function toggleShop() {
-            const modal = document.getElementById('shop-modal');
-            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        function getRarityClass(rarity) {
-            return `rarity-${rarity}`;
-        }
+        initGame();
     </script>
 </body>
 </html>
